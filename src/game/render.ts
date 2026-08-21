@@ -1,5 +1,5 @@
 import { controlPad, currentLevel, flightRush, heatAmount, layoutCamera, predictPath, remainingTargets, type Camera, type GameState } from "./game.ts";
-import { knobFromPull, STICK_KNOB_R, stickWellRadius } from "./input.ts";
+import { knobFromPointer, STICK_KNOB_R, stickWellRadius } from "./input.ts";
 import { BALL_RADIUS, WORLD } from "./math.ts";
 
 const BG = "#07080f";
@@ -198,7 +198,7 @@ function drawStick(
   ctx.lineWidth = 2 + heat * 2.4;
   ctx.stroke();
 
-  const knob = state.aim ? knobFromPull(pad, state.aim.pull, view, safeBottom) : pad;
+  const knob = state.aim ? knobFromPointer(state.aim.pointer, view, safeBottom) : pad;
   ctx.beginPath();
   ctx.arc(knob.x, knob.y, STICK_KNOB_R, 0, Math.PI * 2);
   ctx.fillStyle = active ? heatColor(heat) : "rgba(232, 251, 255, 0.55)";

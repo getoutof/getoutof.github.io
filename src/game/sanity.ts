@@ -1,5 +1,5 @@
 import { controlPad, createGame, flightRush, heatAmount, layoutCamera, nextLevel, pointerUp, predictPath, remainingShots, resetLevel, tick } from "./game.ts";
-import { aimFromStick, knobFromPull, STICK_KNOB_R } from "./input.ts";
+import { aimFromStick, knobFromPointer, STICK_KNOB_R } from "./input.ts";
 import { GROUND_TOP, LEVELS } from "./levels.ts";
 import { MAX_PULL, MAX_SHOTS } from "./math.ts";
 import { createBall, hitsCircle, isSupported, stepWorld } from "./physics.ts";
@@ -21,7 +21,7 @@ if (!isSupported(world.ball, world.platforms)) throw new Error("ball should be s
 const g = resetLevel(0);
 if (remainingShots(g) !== MAX_SHOTS) throw new Error("level should start with full attempts");
 if (g.banner !== LEVELS[0].name) throw new Error("level start should show name banner");
-g.aim = { origin: g.world.ball.pos, pull: { x: 40, y: -90 } };
+g.aim = { origin: g.world.ball.pos, pull: { x: 40, y: -90 }, pointer: { x: 180, y: 400 } };
 const path = predictPath(g, g.aim.pull);
 if (path.length < 5) throw new Error("path too short");
 pointerUp(g, () => {});
@@ -64,24 +64,21 @@ if (Math.abs(pad.y - midY) > 0.01) throw new Error(`stick should sit between gro
 const far = { x: pad.x + 400, y: pad.y + 400 };
 const pull = aimFromStick(pad, far, cam.scale);
 if (Math.abs(Math.hypot(pull.x, pull.y) - MAX_PULL) > 0.01) throw new Error("full drag should reach max pull");
-const downPull = { x: 0, y: -MAX_PULL };
-const downKnob = knobFromPull(pad, downPull, view, 0);
-if (Math.abs(downKnob.y - (view.h - STICK_KNOB_R)) > 0.6) {
-  throw new Error(`max down pull should reach screen edge, knob.y=${downKnob.y} edge=${view.h - STICK_KNOB_R}`);
+const upFinger = { x: pad.x, y: pad.y - 48 };
+const upKnob = knobFromPointer(upFinger, view, 0);
+if (Math.abs(upKnob.x - upFinger.x) > 0.01 || Math.abs(upKnob.y - upFinger.y) > 0.01) {
+  throw new Error(`knob should follow finger up, knob=${JSON.stringify(upKnob)} finger=${JSON.stringify(upFinger)}`);
 }
-const leftPull = { x: MAX_PULL, y: 0 };
-const leftKnob = knobFromPull(pad, leftPull, view, 0);
-if (Math.abs(leftKnob.x - STICK_KNOB_R) > 0.6) {
-  throw new Error(`max left pull should reach screen edge, knob.x=${leftKnob.x}`);
+const topKnob = knobFromPointer({ x: pad.x, y: 0 }, view, 0);
+if (Math.abs(topKnob.y - STICK_KNOB_R) > 0.01) {
+  throw new Error(`finger at top should park knob on the edge, y=${topKnob.y}`);
 }
 const near = { x: pad.x + 20, y: pad.y };
 const shortPull = aimFromStick(pad, near, cam.scale);
 if (Math.hypot(shortPull.x, shortPull.y) >= MAX_PULL * 0.5) throw new Error("short drag should stay below half power");
-const shortKnob = knobFromPull(pad, shortPull, view, 0);
-if (Math.hypot(shortKnob.x - pad.x, shortKnob.y - pad.y) > 50) throw new Error("short pull should not sit on the screen edge");
 
 const delayed = resetLevel(0);
-delayed.aim = { origin: delayed.world.ball.pos, pull: { x: 0, y: -MAX_PULL } };
+delayed.aim = { origin: delayed.world.ball.pos, pull: { x: 0, y: -MAX_PULL }, pointer: pad };
 pointerUp(delayed, () => {});
 tick(delayed, 1 / 60, silent);
 if (delayed.shake > 0.4) throw new Error(`shake should wait after launch, got ${delayed.shake}`);

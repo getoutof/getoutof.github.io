@@ -3,28 +3,13 @@ import { clamp, clampVec, MAX_PULL, type Vec } from "./math.ts";
 export type Aim = {
   origin: Vec;
   pull: Vec;
+  pointer: Vec;
 };
 
 export const STICK_KNOB_R = 18;
 
 export function stickWellRadius(scale: number): number {
   return MAX_PULL * scale * 0.42;
-}
-
-export function distToScreenEdge(
-  pad: Vec,
-  dir: Vec,
-  view: { w: number; h: number },
-  safeBottom: number,
-  margin: number,
-): number {
-  let t = Number.POSITIVE_INFINITY;
-  if (dir.x > 1e-6) t = Math.min(t, (view.w - margin - pad.x) / dir.x);
-  else if (dir.x < -1e-6) t = Math.min(t, (margin - pad.x) / dir.x);
-  const bottom = view.h - safeBottom - margin;
-  if (dir.y > 1e-6) t = Math.min(t, (bottom - pad.y) / dir.y);
-  else if (dir.y < -1e-6) t = Math.min(t, (margin - pad.y) / dir.y);
-  return Math.max(0, t);
 }
 
 export function worldFromClient(
@@ -57,20 +42,14 @@ export function aimFromStick(pad: Vec, pointer: Vec, scale: number): Vec {
   );
 }
 
-export function knobFromPull(
-  pad: Vec,
-  pull: Vec,
+export function knobFromPointer(
+  pointer: Vec,
   view: { w: number; h: number },
   safeBottom: number,
 ): Vec {
-  const p = Math.hypot(pull.x, pull.y);
-  if (p === 0) return { x: pad.x, y: pad.y };
-  const dir = { x: -pull.x / p, y: -pull.y / p };
-  const edge = distToScreenEdge(pad, dir, view, safeBottom, STICK_KNOB_R);
-  const t = (p / MAX_PULL) * edge;
   return {
-    x: clamp(pad.x + dir.x * t, STICK_KNOB_R, view.w - STICK_KNOB_R),
-    y: clamp(pad.y + dir.y * t, STICK_KNOB_R, view.h - safeBottom - STICK_KNOB_R),
+    x: clamp(pointer.x, STICK_KNOB_R, view.w - STICK_KNOB_R),
+    y: clamp(pointer.y, STICK_KNOB_R, view.h - safeBottom - STICK_KNOB_R),
   };
 }
 

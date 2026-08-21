@@ -1,4 +1,4 @@
-import { aimFromStick, clientOnCanvas, inControlZone } from "./input.ts";
+import { aimFromStick, clientOnCanvas, inControlZone, type Aim } from "./input.ts";
 import { GROUND_TOP, LEVELS, targetCircles, type LevelDef } from "./levels.ts";
 import { clamp, clone, LAUNCH_SCALE, MAX_PULL, MAX_SHOTS, WORLD, type Circle, type Vec } from "./math.ts";
 import { createBall, hitsCircle, isResting, isSupported, speed, stepWorld, type Ball, type World } from "./physics.ts";
@@ -24,7 +24,7 @@ export type GameState = {
   shots: number;
   collected: boolean[];
   world: World;
-  aim: { origin: Vec; pull: Vec } | null;
+  aim: Aim | null;
   particles: Particle[];
   trail: Vec[];
   shake: number;
@@ -140,6 +140,7 @@ export function pointerDownStick(
   state.aim = {
     origin: state.world.ball.pos,
     pull: aimFromStick(pad, pointer, camera.scale),
+    pointer,
   };
 }
 
@@ -158,6 +159,7 @@ export function pointerMoveStick(
   state.aim = {
     origin: state.world.ball.pos,
     pull: aimFromStick(pad, pointer, camera.scale),
+    pointer,
   };
 }
 
