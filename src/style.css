@@ -48,14 +48,15 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 8px;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 16px 8px;
   pointer-events: none;
 }
 
 .hud-row {
   display: flex;
-  gap: 14px;
-  font-size: 13px;
+  gap: 16px;
+  font-size: 15px;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
@@ -72,21 +73,44 @@ body {
 .ghost {
   background: transparent;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.8;
+}
+
+.toast {
+  position: fixed;
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  left: 16px;
+  right: 16px;
+  z-index: 4;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgb(7 8 15 / 0.82);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+}
+
+.toast[hidden] {
+  display: none;
 }
 
 .overlay {
   position: fixed;
   inset: 0;
   z-index: 3;
-  display: grid;
-  place-items: end center;
-  padding: 24px 20px calc(28px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: calc(14vh + env(safe-area-inset-top, 0px)) 20px 24px;
   background:
-    linear-gradient(180deg, rgb(7 8 15 / 0.15), rgb(7 8 15 / 0.88) 55%, rgb(7 8 15 / 0.96));
+    linear-gradient(180deg, rgb(7 8 15 / 0.2), rgb(7 8 15 / 0.78) 42%, rgb(7 8 15 / 0.94));
 }
 
 .overlay[hidden],

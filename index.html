@@ -12,7 +12,7 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="format-detection" content="telephone=no" />
     <title>Trajectry</title>
-    <meta name="description" content="Слэнгшот-игра: запусти шар по маякам. Веб сейчас, iOS и Android через WebView." />
+    <meta name="description" content="Слэнгшот: оттяни шар и попади во все маяки." />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="./icon.svg" />
     <link rel="apple-touch-icon" href="./icon.svg" />
@@ -23,17 +23,16 @@
       <div id="hud" class="hud" hidden>
         <div class="hud-row">
           <span id="level-label">Уровень 1</span>
-          <span id="shot-label">Броски 0</span>
+          <span id="shot-label">Попытки 3 из 3</span>
         </div>
         <button id="restart" type="button" class="ghost">Заново</button>
       </div>
+      <div id="toast" class="toast" hidden></div>
       <div id="overlay" class="overlay">
         <div class="panel">
-          <p class="eyebrow">мобильная веб-игра</p>
+          <p class="eyebrow">слэнгшот</p>
           <h1>Trajectry</h1>
-          <p class="lead">
-            Оттяни шар и отпусти — попади во все маяки. Один код для браузера, потом тот же WebView на Android и iOS.
-          </p>
+          <p class="lead">Оттяни шар и отпусти — попади во все маяки.</p>
           <button id="play" type="button" class="primary">Играть</button>
         </div>
       </div>

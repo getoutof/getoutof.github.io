@@ -30,6 +30,8 @@ export type GameState = {
   shake: number;
   time: number;
   message: string;
+  notice: string | null;
+  noticeUntil: number;
 };
 
 type SfxHooks = {
@@ -74,6 +76,8 @@ export function resetLevel(index: number, phase: Phase = "aiming"): GameState {
     shake: 0,
     time: 0,
     message: level.name,
+    notice: null,
+    noticeUntil: 0,
   };
 }
 
@@ -145,9 +149,20 @@ export function pointerUp(state: GameState, onLaunch: () => void): void {
   onLaunch();
 }
 
+export function remainingShots(state: GameState): number {
+  return Math.max(0, MAX_SHOTS - state.shots);
+}
+
+function attemptsWord(n: number): string {
+  if (n === 1) return "попытка";
+  if (n >= 2 && n <= 4) return "попытки";
+  return "попыток";
+}
+
 export function tick(state: GameState, dt: number, sfx: SfxHooks): void {
   state.time += dt;
   state.shake = Math.max(0, state.shake - dt * 18);
+  if (state.notice && state.time >= state.noticeUntil) state.notice = null;
   updateParticles(state, dt);
 
   if (state.phase === "title") {
@@ -181,7 +196,7 @@ export function tick(state: GameState, dt: number, sfx: SfxHooks): void {
     if (outOfWorld(state.world.ball)) {
       if (state.shots >= MAX_SHOTS) {
         state.phase = "fail";
-        state.message = "Шар улетел";
+        state.message = "Шар укатился. Попытки закончились — 3 из 3";
         sfx.fail();
         return;
       }
@@ -200,7 +215,7 @@ export function tick(state: GameState, dt: number, sfx: SfxHooks): void {
     if (settleTimer >= SETTLE_TIME) {
       if (state.shots >= MAX_SHOTS && !allCollected(state)) {
         state.phase = "fail";
-        state.message = "Броски закончились";
+        state.message = "Попытки закончились — 3 из 3. Маяки не собраны";
         sfx.fail();
         return;
       }
@@ -250,7 +265,12 @@ function respawn(state: GameState): void {
   state.world.ball = createBall(level.ball);
   state.phase = "aiming";
   state.trail = [];
-  state.message = "Снова с площадки";
+  const left = remainingShots(state);
+  state.notice =
+    left === 1
+      ? "Шар укатился. Осталась последняя попытка"
+      : `Шар укатился. Осталось ${left} ${attemptsWord(left)}`;
+  state.noticeUntil = state.time + 3.2;
 }
 
 function burst(state: GameState, pos: Vec, color: string, count: number): void {

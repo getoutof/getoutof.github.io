@@ -14,7 +14,7 @@ export const GROUND_FRICTION = 6.5;
 export const REST_SPEED = 18;
 export const BALL_RADIUS = 11;
 export const TARGET_RADIUS = 16;
-export const MAX_SHOTS = 6;
+export const MAX_SHOTS = 3;
 
 export function add(a: Vec, b: Vec): Vec {
   return { x: a.x + b.x, y: a.y + b.y };

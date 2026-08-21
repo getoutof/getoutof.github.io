@@ -11,6 +11,7 @@ import {
   pointerDown,
   pointerMove,
   pointerUp,
+  remainingShots,
   resetLevel,
   tick,
   type Camera,
@@ -31,6 +32,7 @@ const play = required(document.querySelector<HTMLButtonElement>("#play"), "Не�
 const restart = required(document.querySelector<HTMLButtonElement>("#restart"), "Нет restart");
 const levelLabel = required(document.querySelector<HTMLSpanElement>("#level-label"), "Нет level");
 const shotLabel = required(document.querySelector<HTMLSpanElement>("#shot-label"), "Нет shots");
+const toast = required(document.querySelector<HTMLDivElement>("#toast"), "Нет toast");
 const ctx = required(canvas.getContext("2d"), "Canvas 2D недоступен");
 
 lockPageChrome();
@@ -68,8 +70,16 @@ function onPlay(): void {
 
 function syncHud(): void {
   const level = currentLevel(state);
+  const left = remainingShots(state);
   levelLabel.textContent = `Уровень ${state.levelIndex + 1} · ${level.name}`;
-  shotLabel.textContent = `Броски ${state.shots}/${MAX_SHOTS}`;
+  shotLabel.textContent = `Попытки ${left} из ${MAX_SHOTS}`;
+  if (state.notice && overlay.hidden) {
+    toast.hidden = false;
+    toast.textContent = state.notice;
+  } else {
+    toast.hidden = true;
+    toast.textContent = "";
+  }
 }
 
 function toWorld(event: PointerEvent) {
@@ -125,21 +135,21 @@ function frame(now: number): void {
   tick(state, dt, sfx);
   camera = draw(ctx, state, view);
   if (state.phase !== prev) {
-    syncHud();
     if (state.phase === "win") {
       haptic("heavy");
       const lastLevel = state.levelIndex === LEVELS.length - 1;
       showOverlay(
         lastLevel ? "Орбита закрыта" : "Маяки собраны",
-        lastLevel ? "Все шесть уровней пройдены. Можно крутить заново." : "Следующая карта уже ждёт бросок.",
+        lastLevel ? "Все шесть уровней пройдены. Можно крутить заново." : "Следующий уровень — снова 3 попытки.",
         lastLevel ? "Сначала" : "Дальше",
       );
     }
     if (state.phase === "fail") {
       haptic("heavy");
-      showOverlay("Мимо", `${state.message}. Осталось попробовать другую дугу.`, "Ещё раз");
+      showOverlay("Попытки закончились", state.message, "Ещё раз");
     }
   }
+  syncHud();
   requestAnimationFrame(frame);
 }
 
