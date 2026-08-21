@@ -4,7 +4,7 @@
 
 **Поиграть:** [getoutof.github.io/trajectry](https://getoutof.github.io/trajectry/)
 
-Пуш в `main` или в `cursor/**` собирает `dist` и выкладывает на GitHub Pages (Actions). Репозиторий сейчас приватный: страница видна тем, у кого есть доступ. На бесплатном GitHub Pages для private-репо может быть недоступен — тогда либо Pro/Team, либо сделать репозиторий public. Если деплой не стартовал: Settings → Pages → Source → **GitHub Actions**.
+Пуш в `main` или в `cursor/**` собирает `dist` и выкладывает на GitHub Pages. Один раз включи: **Settings → Pages → Source → GitHub Actions**. Репозиторий приватный — страница видна тем, у кого есть доступ; на Free-плане Pages для private может быть недоступен (нужен Pro/Team или public-репо).
 
 ## Лицензия и монетизация
 
