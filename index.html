@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#07080f" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>Trajectry</title>
+    <meta name="description" content="Слэнгшот-игра: запусти шар по маякам. Веб сейчас, iOS и Android через WebView." />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <script type="module" crossorigin src="./assets/index-CieGn_oN.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CdikVEm9.css">
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game"></canvas>
+      <div id="hud" class="hud" hidden>
+        <div class="hud-row">
+          <span id="level-label">Уровень 1</span>
+          <span id="shot-label">Броски 0</span>
+        </div>
+        <button id="restart" type="button" class="ghost">Заново</button>
+      </div>
+      <div id="overlay" class="overlay">
+        <div class="panel">
+          <p class="eyebrow">мобильная веб-игра</p>
+          <h1>Trajectry</h1>
+          <p class="lead">
+            Оттяни шар и отпусти — попади во все маяки. Один код для браузера, потом тот же WebView на Android и iOS.
+          </p>
+          <button id="play" type="button" class="primary">Играть</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
