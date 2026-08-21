@@ -5,6 +5,7 @@ import {
   currentLevel,
   layoutCamera,
   LEVELS,
+  MAX_PULL,
   MAX_SHOTS,
   nextLevel,
   pointerDownStick,
@@ -107,9 +108,9 @@ canvas.addEventListener("pointermove", (event) => {
 });
 
 canvas.addEventListener("pointerup", () => {
-  pointerUp(state, () => {
+  pointerUp(state, (power) => {
     sfx.launch();
-    haptic("medium");
+    haptic(power / MAX_PULL > 0.72 ? "heavy" : "medium");
     syncHud();
   });
 });

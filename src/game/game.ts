@@ -1,6 +1,6 @@
 import { aimFromStick, clientOnCanvas, inControlZone } from "./input.ts";
 import { GROUND_TOP, LEVELS, targetCircles, type LevelDef } from "./levels.ts";
-import { clone, LAUNCH_SCALE, MAX_SHOTS, WORLD, type Circle, type Vec } from "./math.ts";
+import { clamp, clone, LAUNCH_SCALE, MAX_PULL, MAX_SHOTS, WORLD, type Circle, type Vec } from "./math.ts";
 import { createBall, hitsCircle, isResting, isSupported, speed, stepWorld, type Ball, type World } from "./physics.ts";
 
 export type Phase = "title" | "aiming" | "flying" | "settle" | "win" | "fail";
@@ -159,13 +159,14 @@ export function pointerMoveStick(
   };
 }
 
-export function pointerUp(state: GameState, onLaunch: () => void): void {
+export function pointerUp(state: GameState, onLaunch: (power: number) => void): void {
   if (state.phase !== "aiming" || !state.aim) return;
   const power = Math.hypot(state.aim.pull.x, state.aim.pull.y);
   if (power < 12) {
     state.aim = null;
     return;
   }
+  const charge = clamp(power / MAX_PULL, 0, 1);
   state.world.ball.vel = {
     x: state.aim.pull.x * LAUNCH_SCALE,
     y: state.aim.pull.y * LAUNCH_SCALE,
@@ -174,7 +175,13 @@ export function pointerUp(state: GameState, onLaunch: () => void): void {
   state.phase = "flying";
   state.shots += 1;
   state.trail = [];
-  onLaunch();
+  state.shake = Math.max(state.shake, 2.4 + charge * 8.5);
+  onLaunch(power);
+}
+
+export function flightRush(state: GameState): number {
+  if (state.phase !== "flying" && state.phase !== "settle") return 0;
+  return clamp((speed(state.world.ball) - 140) / 860, 0, 1);
 }
 
 export function remainingShots(state: GameState): number {
@@ -190,6 +197,14 @@ function attemptsWord(n: number): string {
 export function tick(state: GameState, dt: number, sfx: SfxHooks): void {
   state.time += dt;
   state.shake = Math.max(0, state.shake - dt * 18);
+  if (state.phase === "aiming" && state.aim) {
+    const charge = clamp(Math.hypot(state.aim.pull.x, state.aim.pull.y) / MAX_PULL, 0, 1);
+    state.shake = Math.max(state.shake, charge * charge * 4.2);
+  }
+  if (state.phase === "flying" || state.phase === "settle") {
+    const rush = flightRush(state);
+    state.shake = Math.min(9, Math.max(state.shake, rush * rush * 6.8));
+  }
   if (state.notice && state.time >= state.noticeUntil) state.notice = null;
   if (state.banner && state.time >= state.bannerUntil) state.banner = null;
   updateParticles(state, dt);
@@ -208,11 +223,12 @@ export function tick(state: GameState, dt: number, sfx: SfxHooks): void {
     const bounced = state.world.ball.vel.y < 0 && prevVy > 80 && prevSpeed > 90;
     if (bounced && state.time - lastBounce > 0.12) {
       lastBounce = state.time;
-      state.shake = Math.min(7, prevSpeed / 180);
+      state.shake = Math.max(state.shake, Math.min(8, prevSpeed / 150));
       sfx.bounce();
     }
     state.trail.push(clone(state.world.ball.pos));
-    if (state.trail.length > 16) state.trail.shift();
+    const trailCap = 12 + Math.round(flightRush(state) * 22);
+    while (state.trail.length > trailCap) state.trail.shift();
     collectTargets(state, sfx);
 
     if (allCollected(state)) {
@@ -325,4 +341,4 @@ function updateParticles(state: GameState, dt: number): void {
   state.particles = state.particles.filter((p) => p.life > 0);
 }
 
-export { LEVELS, MAX_SHOTS };
+export { LEVELS, MAX_PULL, MAX_SHOTS };

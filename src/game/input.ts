@@ -11,8 +11,10 @@ export function stickWellRadius(scale: number): number {
   return MAX_PULL * scale * 0.42;
 }
 
+export const STICK_OVERSHOOT = STICK_KNOB_R * 0.5;
+
 export function stickKnobTravel(scale: number): number {
-  return stickWellRadius(scale) + STICK_KNOB_R;
+  return stickWellRadius(scale) + STICK_OVERSHOOT;
 }
 
 export function worldFromClient(

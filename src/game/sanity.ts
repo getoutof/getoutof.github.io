@@ -1,5 +1,5 @@
-import { controlPad, createGame, layoutCamera, nextLevel, pointerUp, predictPath, remainingShots, resetLevel, tick } from "./game.ts";
-import { aimFromStick, knobFromPull, STICK_KNOB_R, stickKnobTravel, stickWellRadius } from "./input.ts";
+import { controlPad, createGame, flightRush, layoutCamera, nextLevel, pointerUp, predictPath, remainingShots, resetLevel, tick } from "./game.ts";
+import { aimFromStick, knobFromPull, STICK_OVERSHOOT, stickKnobTravel, stickWellRadius } from "./input.ts";
 import { GROUND_TOP, LEVELS } from "./levels.ts";
 import { MAX_PULL, MAX_SHOTS } from "./math.ts";
 import { createBall, hitsCircle, isSupported, stepWorld } from "./physics.ts";
@@ -65,12 +65,19 @@ const pull = aimFromStick(pad, far, cam.scale);
 if (Math.abs(Math.hypot(pull.x, pull.y) - MAX_PULL) > 0.01) throw new Error("full drag should reach max pull");
 const knob = knobFromPull(pad, pull, cam.scale);
 const knobDist = Math.hypot(knob.x - pad.x, knob.y - pad.y);
-const maxKnob = well + STICK_KNOB_R;
+const maxKnob = well + STICK_OVERSHOOT;
 if (knobDist > maxKnob + 0.5) throw new Error(`knob escaped ${knobDist} > ${maxKnob}`);
-if (knobDist < maxKnob - 0.5) throw new Error(`full pull should sit a knob-radius past the well, got ${knobDist}`);
-if (Math.abs(stickKnobTravel(cam.scale) - maxKnob) > 0.01) throw new Error("stickKnobTravel should be well + knob");
+if (knobDist < maxKnob - 0.5) throw new Error(`full pull should sit a half-radius past the well, got ${knobDist}`);
+if (Math.abs(stickKnobTravel(cam.scale) - maxKnob) > 0.01) throw new Error("stickKnobTravel should be well + half knob");
 const near = { x: pad.x + 20, y: pad.y };
 const shortPull = aimFromStick(pad, near, cam.scale);
 if (Math.hypot(shortPull.x, shortPull.y) >= MAX_PULL * 0.5) throw new Error("short drag should stay below half power");
+
+const rush = resetLevel(0);
+rush.phase = "flying";
+rush.world.ball.vel = { x: 920, y: -180 };
+tick(rush, 1 / 60, silent);
+if (flightRush(rush) < 0.7) throw new Error(`expected strong rush, got ${flightRush(rush)}`);
+if (rush.shake < 2) throw new Error(`fast flight should shake, got ${rush.shake}`);
 
 console.log("ok", { phase: g.phase, shots: g.shots, collected: g.collected, ball: g.world.ball.pos });

@@ -1,6 +1,6 @@
-import { controlPad, currentLevel, layoutCamera, predictPath, remainingTargets, type Camera, type GameState } from "./game.ts";
+import { controlPad, currentLevel, flightRush, layoutCamera, predictPath, remainingTargets, type Camera, type GameState } from "./game.ts";
 import { knobFromPull, STICK_KNOB_R, stickWellRadius } from "./input.ts";
-import { BALL_RADIUS, WORLD } from "./math.ts";
+import { BALL_RADIUS, MAX_PULL, WORLD } from "./math.ts";
 
 const BG = "#07080f";
 const BALL = "#e8fbff";
@@ -38,8 +38,13 @@ export function draw(
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, view.w, view.h);
 
+  const rush = flightRush(state);
+  const look = rush * 0.014;
   ctx.save();
-  ctx.translate(camera.offsetX + (Math.random() - 0.5) * state.shake, camera.offsetY + (Math.random() - 0.5) * state.shake);
+  ctx.translate(
+    camera.offsetX + (Math.random() - 0.5) * state.shake + state.world.ball.vel.x * look * camera.scale,
+    camera.offsetY + (Math.random() - 0.5) * state.shake + state.world.ball.vel.y * look * camera.scale,
+  );
   ctx.scale(camera.scale, camera.scale);
 
   drawBackdrop(ctx, state.time);
@@ -52,7 +57,7 @@ export function draw(
   drawParticles(ctx, state);
 
   ctx.restore();
-  drawVignette(ctx, view.w, view.h);
+  drawVignette(ctx, view.w, view.h, rush);
   if (state.phase === "aiming" || state.phase === "flying" || state.phase === "settle") {
     drawStick(ctx, state, view, camera, safeBottom);
   }
@@ -125,11 +130,13 @@ function drawTargets(ctx: CanvasRenderingContext2D, state: GameState): void {
 }
 
 function drawTrail(ctx: CanvasRenderingContext2D, state: GameState): void {
+  const rush = flightRush(state);
   state.trail.forEach((p, i) => {
-    ctx.globalAlpha = (i / state.trail.length) * 0.45;
+    const t = i / Math.max(1, state.trail.length);
+    ctx.globalAlpha = t * (0.4 + rush * 0.5);
     ctx.fillStyle = ACCENT;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 2.4 + rush * 4.2 * t, 0, Math.PI * 2);
     ctx.fill();
   });
   ctx.globalAlpha = 1;
@@ -157,11 +164,12 @@ function drawStick(
 ): void {
   const pad = controlPad(view, camera, safeBottom);
   const active = state.phase === "aiming";
+  const charge = state.aim ? Math.min(1, Math.hypot(state.aim.pull.x, state.aim.pull.y) / MAX_PULL) : 0;
   ctx.globalAlpha = active ? 1 : 0.35;
   ctx.beginPath();
   ctx.arc(pad.x, pad.y, stickWellRadius(camera.scale), 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(125, 240, 255, 0.35)";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = `rgba(125, 240, 255, ${0.32 + charge * 0.5})`;
+  ctx.lineWidth = 2 + charge * 2.4;
   ctx.stroke();
 
   const knob = state.aim ? knobFromPull(pad, state.aim.pull, camera.scale) : pad;
@@ -176,18 +184,61 @@ function drawStick(
 }
 
 function drawBall(ctx: CanvasRenderingContext2D, state: GameState): void {
-  const { pos } = state.world.ball;
+  const { pos, vel } = state.world.ball;
+  const rush = flightRush(state);
+  drawSpeedLines(ctx, pos.x, pos.y, vel.x, vel.y, rush, state.time);
+  ctx.save();
+  ctx.translate(pos.x, pos.y);
+  if (rush > 0.04) {
+    const stretch = 1 + rush * 0.72;
+    ctx.rotate(Math.atan2(vel.y, vel.x));
+    ctx.scale(stretch, 1 / Math.sqrt(stretch));
+  }
   ctx.shadowColor = ACCENT;
-  ctx.shadowBlur = 18;
-  const g = ctx.createRadialGradient(pos.x - 3, pos.y - 4, 2, pos.x, pos.y, BALL_RADIUS);
+  ctx.shadowBlur = 18 + rush * 26;
+  const g = ctx.createRadialGradient(-3, -4, 2, 0, 0, BALL_RADIUS);
   g.addColorStop(0, "#ffffff");
   g.addColorStop(0.45, BALL);
   g.addColorStop(1, "#5bb8c8");
   ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.arc(pos.x, pos.y, BALL_RADIUS, 0, Math.PI * 2);
+  ctx.arc(0, 0, BALL_RADIUS, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+function drawSpeedLines(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  vx: number,
+  vy: number,
+  rush: number,
+  time: number,
+): void {
+  if (rush < 0.08) return;
+  const s = Math.hypot(vx, vy);
+  if (s < 1) return;
+  const ux = vx / s;
+  const uy = vy / s;
+  const n = 5 + Math.floor(rush * 9);
+  ctx.strokeStyle = ACCENT;
+  ctx.lineWidth = 1.2 + rush * 1.6;
+  ctx.lineCap = "round";
+  for (let i = 0; i < n; i += 1) {
+    const along = 14 + i * (7 + rush * 9) + ((time * 140 + i * 19) % 18);
+    const side = ((i % 2) * 2 - 1) * (7 + (i % 4) * 3.2) * (0.55 + rush);
+    ctx.globalAlpha = (0.12 + rush * 0.5) * (1 - i / n);
+    ctx.beginPath();
+    const sx = x - ux * along + -uy * side;
+    const sy = y - uy * along + ux * side;
+    const len = 9 + rush * 22;
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx - ux * len, sy - uy * len);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 }
 
 function drawParticles(ctx: CanvasRenderingContext2D, state: GameState): void {
@@ -201,10 +252,10 @@ function drawParticles(ctx: CanvasRenderingContext2D, state: GameState): void {
   ctx.globalAlpha = 1;
 }
 
-function drawVignette(ctx: CanvasRenderingContext2D, w: number, h: number): void {
-  const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.25, w / 2, h / 2, Math.max(w, h) * 0.72);
+function drawVignette(ctx: CanvasRenderingContext2D, w: number, h: number, rush: number): void {
+  const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * (0.25 - rush * 0.08), w / 2, h / 2, Math.max(w, h) * 0.72);
   g.addColorStop(0, "rgba(0,0,0,0)");
-  g.addColorStop(1, "rgba(0,0,0,0.42)");
+  g.addColorStop(1, `rgba(0,0,0,${0.42 + rush * 0.22})`);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
 }
