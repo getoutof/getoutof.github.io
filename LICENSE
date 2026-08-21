@@ -1,0 +1,85 @@
+Trajectry Source License 1.0
+
+Copyright (c) 2026 getoutof
+
+All rights reserved.
+
+This is a source-available license, not an open-source license.
+The English text of this file is the license. Any other-language
+summary is for convenience only and has no legal effect.
+
+1. Purpose
+
+Trajectry is a commercial game. The copyright holder publishes:
+
+  (a) Trajectry Free, which may include advertising; and
+  (b) Trajectry Pro (and other paid unlocks), sold without that
+      advertising and/or with extra features.
+
+Those products, store listings, trademarks, and all commercial
+exploitation of the Software are reserved exclusively to the
+copyright holder.
+
+2. Limited permission
+
+Provided you follow this license, you may:
+
+  (a) view and download the source for personal evaluation;
+  (b) run unmodified or privately modified copies on devices you
+      own or control, for personal, non-commercial play;
+  (c) fork the repository privately for personal study.
+
+3. Restrictions
+
+You may not, without a separate written license from the copyright
+holder:
+
+  (a) distribute, publish, sublicense, sell, rent, or share the
+      Software or any derivative, in source or binary form;
+  (b) publish the Software or a derivative on the App Store,
+      Google Play, the web, or any other store or marketplace,
+      whether free or paid;
+  (c) use the Software to show advertising, track users, or
+      collect revenue for anyone other than the copyright holder;
+  (d) strip, block, or replace advertising, paywalls, or license
+      notices in order to ship your own build;
+  (e) offer a competing game that is a copy or substantial
+      derivative of Trajectry;
+  (f) use the name Trajectry, related marks, or app IDs in a way
+      that suggests an official release.
+
+4. Contributions
+
+By submitting a contribution (pull request, patch, issue with
+code, or similar) you assign to the copyright holder all right,
+title, and interest in that contribution, or, if assignment is
+not legally effective, you grant the copyright holder a
+perpetual, worldwide, irrevocable, royalty-free, sublicensable
+license to use, modify, and commercially exploit the contribution
+in Trajectry Free, Trajectry Pro, and any other product, including
+with advertising and paid unlocks. You warrant that you have the
+right to make that assignment or grant.
+
+5. Third-party components
+
+Files or packages listed in package.json under their own licenses
+remain under those licenses. This file covers original Trajectry
+source and assets in this repository unless a file says otherwise.
+
+6. No warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+THE COPYRIGHT HOLDER IS NOT LIABLE FOR ANY CLAIM, DAMAGES, OR
+OTHER LIABILITY ARISING FROM THE SOFTWARE.
+
+7. Termination
+
+This license ends automatically if you breach it. Sections 1, 3,
+4, 6, and 7 survive termination. On termination you must delete
+public copies and store listings you made in breach of this
+license.
+
+8. Entire license
+
+No right is granted except as expressly stated. Reserved rights
+remain with the copyright holder.
