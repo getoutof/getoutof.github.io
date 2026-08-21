@@ -28,8 +28,8 @@ export function clientOnCanvas(clientX: number, clientY: number, canvas: HTMLCan
 export function aimFromStick(pad: Vec, pointer: Vec, scale: number): Vec {
   return clampVec(
     {
-      x: (pointer.x - pad.x) / scale,
-      y: (pointer.y - pad.y) / scale,
+      x: (pad.x - pointer.x) / scale,
+      y: (pad.y - pointer.y) / scale,
     },
     MAX_PULL,
   );

@@ -164,7 +164,7 @@ function drawStick(
   ctx.stroke();
 
   const knob = state.aim
-    ? { x: pad.x + state.aim.pull.x * camera.scale, y: pad.y + state.aim.pull.y * camera.scale }
+    ? { x: pad.x - state.aim.pull.x * camera.scale, y: pad.y - state.aim.pull.y * camera.scale }
     : pad;
   ctx.beginPath();
   ctx.arc(knob.x, knob.y, 18, 0, Math.PI * 2);
