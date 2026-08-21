@@ -2,9 +2,9 @@
 
 Мобильная слэнгшот-игра на Canvas: один веб-код, позже тот же билд в WebView на Android и iOS через Capacitor.
 
-**Поиграть:** [getoutof.github.io/trajectry](https://getoutof.github.io/trajectry/)
+**Поиграть:** [getoutof.github.io](https://getoutof.github.io/)
 
-GitHub не даёт экшену включить Pages самому. Один раз: **[Settings → Pages](https://github.com/getoutof/trajectry/settings/pages) → Source → GitHub Actions**, потом **Actions → Deploy GitHub Pages → Run workflow**. Дальше каждый пуш в `main` обновляет сайт. Репозиторий приватный — страница видна тем, у кого есть доступ; на Free-плане для private может понадобиться Pro/Team или public-репо.
+Пуш в `main` или `cursor/**` собирает `dist` и выкладывает на GitHub Pages. Репозиторий — user-site (`getoutof.github.io`), поэтому в **[Settings → Pages](https://github.com/getoutof/getoutof.github.io/settings/pages)** Source должен быть **GitHub Actions**, не «Deploy from a branch».
 
 ## Лицензия и монетизация
 
