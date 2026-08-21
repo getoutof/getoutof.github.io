@@ -1,5 +1,5 @@
 import { aimFromStick, clientOnCanvas, inControlZone } from "./input.ts";
-import { LEVELS, targetCircles, type LevelDef } from "./levels.ts";
+import { GROUND_TOP, LEVELS, targetCircles, type LevelDef } from "./levels.ts";
 import { clone, LAUNCH_SCALE, MAX_SHOTS, WORLD, type Circle, type Vec } from "./math.ts";
 import { createBall, hitsCircle, isResting, isSupported, speed, stepWorld, type Ball, type World } from "./physics.ts";
 
@@ -116,8 +116,10 @@ export function predictPath(state: GameState, pull: Vec, steps = 42): Vec[] {
   return path;
 }
 
-export function controlPad(view: { w: number; h: number }, safeBottom: number): Vec {
-  return { x: view.w / 2, y: view.h - safeBottom - 58 };
+export function controlPad(view: { w: number; h: number }, camera: Camera, safeBottom: number): Vec {
+  const groundY = camera.offsetY + GROUND_TOP * camera.scale;
+  const screenBottom = view.h - safeBottom;
+  return { x: view.w / 2, y: (groundY + screenBottom) / 2 };
 }
 
 export function pointerDownStick(
@@ -130,9 +132,9 @@ export function pointerDownStick(
   clientY: number,
 ): void {
   if (state.phase !== "aiming") return;
-  const pad = controlPad(view, safeBottom);
+  const pad = controlPad(view, camera, safeBottom);
   const pointer = clientOnCanvas(clientX, clientY, canvas);
-  if (!inControlZone(pad, pointer, view.h)) return;
+  if (!inControlZone(pad, pointer, camera.scale)) return;
   state.aim = {
     origin: state.world.ball.pos,
     pull: aimFromStick(pad, pointer, camera.scale),
@@ -149,7 +151,7 @@ export function pointerMoveStick(
   clientY: number,
 ): void {
   if (state.phase !== "aiming" || !state.aim) return;
-  const pad = controlPad(view, safeBottom);
+  const pad = controlPad(view, camera, safeBottom);
   const pointer = clientOnCanvas(clientX, clientY, canvas);
   state.aim = {
     origin: state.world.ball.pos,

@@ -1,6 +1,7 @@
-import { createGame, nextLevel, pointerUp, predictPath, remainingShots, resetLevel, tick } from "./game.ts";
+import { controlPad, createGame, layoutCamera, nextLevel, pointerUp, predictPath, remainingShots, resetLevel, tick } from "./game.ts";
+import { aimFromStick, knobFromPull, STICK_KNOB_R, stickWellRadius } from "./input.ts";
 import { GROUND_TOP, LEVELS } from "./levels.ts";
-import { MAX_SHOTS } from "./math.ts";
+import { MAX_PULL, MAX_SHOTS } from "./math.ts";
 import { createBall, hitsCircle, isSupported, stepWorld } from "./physics.ts";
 
 const silent = { bounce() {}, collect() {}, win() {}, fail() {} };
@@ -50,5 +51,22 @@ if (!hitsCircle({ pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, r: 5 }, { x: 3, y: 0
 const title = createGame();
 if (title.phase !== "title") throw new Error("expected title");
 if (title.banner) throw new Error("title should not show level banner");
+
+const view = { w: 360, h: 640 };
+const cam = layoutCamera(view.w, view.h);
+const pad = controlPad(view, cam, 0);
+const groundY = cam.offsetY + GROUND_TOP * cam.scale;
+const midY = (groundY + view.h) / 2;
+if (Math.abs(pad.y - midY) > 0.01) throw new Error(`stick should sit between ground and screen, got ${pad.y} expected ${midY}`);
+
+const well = stickWellRadius(cam.scale);
+const far = { x: pad.x + 400, y: pad.y + 400 };
+const pull = aimFromStick(pad, far, cam.scale);
+if (Math.hypot(pull.x, pull.y) > MAX_PULL + 0.01) throw new Error("pull exceeded max");
+const knob = knobFromPull(pad, pull, cam.scale);
+const knobDist = Math.hypot(knob.x - pad.x, knob.y - pad.y);
+if (knobDist > well - STICK_KNOB_R + 0.5) {
+  throw new Error(`knob escaped well ${knobDist} > ${well - STICK_KNOB_R}`);
+}
 
 console.log("ok", { phase: g.phase, shots: g.shots, collected: g.collected, ball: g.world.ball.pos });

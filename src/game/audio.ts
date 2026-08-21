@@ -148,16 +148,30 @@ export function createAudio(): Sfx {
 
   const kick = (when: number) => {
     const ac = get();
-    const osc = ac.createOscillator();
-    const g = ac.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(78, when);
-    osc.frequency.exponentialRampToValueAtTime(32, when + 0.22);
-    g.gain.setValueAtTime(0.18, when);
-    g.gain.exponentialRampToValueAtTime(0.0001, when + 0.62);
-    osc.connect(g).connect(ac.destination);
-    osc.start(when);
-    osc.stop(when + 0.65);
+    const voice = (
+      type: OscillatorType,
+      startHz: number,
+      midHz: number,
+      endHz: number,
+      peak: number,
+      midT: number,
+      endT: number,
+    ) => {
+      const osc = ac.createOscillator();
+      const g = ac.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(startHz, when);
+      osc.frequency.exponentialRampToValueAtTime(midHz, when + midT);
+      osc.frequency.exponentialRampToValueAtTime(endHz, when + endT);
+      g.gain.setValueAtTime(peak, when);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + endT);
+      osc.connect(g).connect(ac.destination);
+      osc.start(when);
+      osc.stop(when + endT + 0.05);
+    };
+    voice("sine", 48, 26, 20, 0.34, 0.1, 1.75);
+    voice("sine", 28, 20, 16, 0.26, 0.22, 2.15);
+    voice("triangle", 160, 70, 42, 0.07, 0.03, 0.08);
   };
 
   const playLoop = (origin: number, first: boolean) => {

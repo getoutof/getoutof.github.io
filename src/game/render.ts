@@ -1,5 +1,6 @@
 import { controlPad, currentLevel, layoutCamera, predictPath, remainingTargets, type Camera, type GameState } from "./game.ts";
-import { BALL_RADIUS, MAX_PULL, WORLD } from "./math.ts";
+import { knobFromPull, STICK_KNOB_R, stickWellRadius } from "./input.ts";
+import { BALL_RADIUS, WORLD } from "./math.ts";
 
 const BG = "#07080f";
 const BALL = "#e8fbff";
@@ -154,20 +155,18 @@ function drawStick(
   camera: Camera,
   safeBottom: number,
 ): void {
-  const pad = controlPad(view, safeBottom);
+  const pad = controlPad(view, camera, safeBottom);
   const active = state.phase === "aiming";
   ctx.globalAlpha = active ? 1 : 0.35;
   ctx.beginPath();
-  ctx.arc(pad.x, pad.y, MAX_PULL * camera.scale * 0.42, 0, Math.PI * 2);
+  ctx.arc(pad.x, pad.y, stickWellRadius(camera.scale), 0, Math.PI * 2);
   ctx.strokeStyle = "rgba(125, 240, 255, 0.35)";
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  const knob = state.aim
-    ? { x: pad.x - state.aim.pull.x * camera.scale, y: pad.y - state.aim.pull.y * camera.scale }
-    : pad;
+  const knob = state.aim ? knobFromPull(pad, state.aim.pull, camera.scale) : pad;
   ctx.beginPath();
-  ctx.arc(knob.x, knob.y, 18, 0, Math.PI * 2);
+  ctx.arc(knob.x, knob.y, STICK_KNOB_R, 0, Math.PI * 2);
   ctx.fillStyle = active ? "#e8fbff" : "rgba(232, 251, 255, 0.55)";
   ctx.fill();
   ctx.strokeStyle = ACCENT;
