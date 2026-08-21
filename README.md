@@ -4,7 +4,7 @@
 
 **Поиграть:** [getoutof.github.io/trajectry](https://getoutof.github.io/trajectry/)
 
-Пуш в `main` или в `cursor/**` собирает `dist` и выкладывает на GitHub Pages. Один раз включи: **Settings → Pages → Source → GitHub Actions**. Репозиторий приватный — страница видна тем, у кого есть доступ; на Free-плане Pages для private может быть недоступен (нужен Pro/Team или public-репо).
+GitHub не даёт экшену включить Pages самому. Один раз: **[Settings → Pages](https://github.com/getoutof/trajectry/settings/pages) → Source → GitHub Actions**, потом **Actions → Deploy GitHub Pages → Run workflow**. Дальше каждый пуш в `main` обновляет сайт. Репозиторий приватный — страница видна тем, у кого есть доступ; на Free-плане для private может понадобиться Pro/Team или public-репо.
 
 ## Лицензия и монетизация
 
