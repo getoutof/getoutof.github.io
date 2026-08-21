@@ -1,5 +1,5 @@
 import { controlPad, createGame, layoutCamera, nextLevel, pointerUp, predictPath, remainingShots, resetLevel, tick } from "./game.ts";
-import { aimFromStick, knobFromPull, STICK_KNOB_R, stickWellRadius } from "./input.ts";
+import { aimFromStick, knobFromPull, STICK_KNOB_R, stickKnobTravel, stickWellRadius } from "./input.ts";
 import { GROUND_TOP, LEVELS } from "./levels.ts";
 import { MAX_PULL, MAX_SHOTS } from "./math.ts";
 import { createBall, hitsCircle, isSupported, stepWorld } from "./physics.ts";
@@ -62,11 +62,15 @@ if (Math.abs(pad.y - midY) > 0.01) throw new Error(`stick should sit between gro
 const well = stickWellRadius(cam.scale);
 const far = { x: pad.x + 400, y: pad.y + 400 };
 const pull = aimFromStick(pad, far, cam.scale);
-if (Math.hypot(pull.x, pull.y) > MAX_PULL + 0.01) throw new Error("pull exceeded max");
+if (Math.abs(Math.hypot(pull.x, pull.y) - MAX_PULL) > 0.01) throw new Error("full drag should reach max pull");
 const knob = knobFromPull(pad, pull, cam.scale);
 const knobDist = Math.hypot(knob.x - pad.x, knob.y - pad.y);
-if (knobDist > well - STICK_KNOB_R + 0.5) {
-  throw new Error(`knob escaped well ${knobDist} > ${well - STICK_KNOB_R}`);
-}
+const maxKnob = well + STICK_KNOB_R;
+if (knobDist > maxKnob + 0.5) throw new Error(`knob escaped ${knobDist} > ${maxKnob}`);
+if (knobDist < maxKnob - 0.5) throw new Error(`full pull should sit a knob-radius past the well, got ${knobDist}`);
+if (Math.abs(stickKnobTravel(cam.scale) - maxKnob) > 0.01) throw new Error("stickKnobTravel should be well + knob");
+const near = { x: pad.x + 20, y: pad.y };
+const shortPull = aimFromStick(pad, near, cam.scale);
+if (Math.hypot(shortPull.x, shortPull.y) >= MAX_PULL * 0.5) throw new Error("short drag should stay below half power");
 
 console.log("ok", { phase: g.phase, shots: g.shots, collected: g.collected, ball: g.world.ball.pos });

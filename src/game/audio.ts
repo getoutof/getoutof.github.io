@@ -60,12 +60,9 @@ const GUITAR: Chord[] = [
   { t: 51.4, f: [D2, A2], v: 0.05, d: 3.8 },
 ];
 
-const KICK = [0, 8.0, 16.1, 24.2, 32.1, 40.2, 48.1, 56.3];
-
 const LOOP = 70;
 const PIANO_IN = 8;
 const GUITAR_IN = 16;
-const KICK_IN = 24;
 
 export function createAudio(): Sfx {
   let ctx: AudioContext | null = null;
@@ -146,43 +143,13 @@ export function createAudio(): Sfx {
     }
   };
 
-  const kick = (when: number) => {
-    const ac = get();
-    const voice = (
-      type: OscillatorType,
-      startHz: number,
-      midHz: number,
-      endHz: number,
-      peak: number,
-      midT: number,
-      endT: number,
-    ) => {
-      const osc = ac.createOscillator();
-      const g = ac.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(startHz, when);
-      osc.frequency.exponentialRampToValueAtTime(midHz, when + midT);
-      osc.frequency.exponentialRampToValueAtTime(endHz, when + endT);
-      g.gain.setValueAtTime(peak, when);
-      g.gain.exponentialRampToValueAtTime(0.0001, when + endT);
-      osc.connect(g).connect(ac.destination);
-      osc.start(when);
-      osc.stop(when + endT + 0.05);
-    };
-    voice("sine", 48, 26, 20, 0.34, 0.1, 1.75);
-    voice("sine", 28, 20, 16, 0.26, 0.22, 2.15);
-    voice("triangle", 160, 70, 42, 0.07, 0.03, 0.08);
-  };
-
   const playLoop = (origin: number, first: boolean) => {
     const pianoAt = first ? PIANO_IN : 2;
     const guitarAt = first ? GUITAR_IN : 6;
-    const kickAt = first ? KICK_IN : 10;
     for (const hit of PIANO) piano(hit.f, origin + pianoAt + hit.t, hit.v, hit.d);
     for (const chord of GUITAR) {
       for (const freq of chord.f) guitar(freq, origin + guitarAt + chord.t, chord.v, chord.d);
     }
-    for (const t of KICK) kick(origin + kickAt + t);
   };
 
   return {
