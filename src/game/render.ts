@@ -1,5 +1,5 @@
-import { currentLevel, layoutCamera, predictPath, remainingTargets, type Camera, type GameState } from "./game.ts";
-import { BALL_RADIUS, WORLD } from "./math.ts";
+import { controlPad, currentLevel, layoutCamera, predictPath, remainingTargets, type Camera, type GameState } from "./game.ts";
+import { BALL_RADIUS, MAX_PULL, WORLD } from "./math.ts";
 
 const BG = "#07080f";
 const BALL = "#e8fbff";
@@ -27,7 +27,12 @@ export function resizeCanvas(canvas: HTMLCanvasElement, ctx: CanvasRenderingCont
   return { w, h };
 }
 
-export function draw(ctx: CanvasRenderingContext2D, state: GameState, view: { w: number; h: number }): Camera {
+export function draw(
+  ctx: CanvasRenderingContext2D,
+  state: GameState,
+  view: { w: number; h: number },
+  safeBottom: number,
+): Camera {
   const camera = layoutCamera(view.w, view.h);
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, view.w, view.h);
@@ -41,12 +46,15 @@ export function draw(ctx: CanvasRenderingContext2D, state: GameState, view: { w:
   drawPlatforms(ctx, state);
   drawTargets(ctx, state);
   drawTrail(ctx, state);
-  if (state.aim) drawAim(ctx, state);
+  if (state.aim) drawTrajectory(ctx, state);
   drawBall(ctx, state);
   drawParticles(ctx, state);
 
   ctx.restore();
   drawVignette(ctx, view.w, view.h);
+  if (state.phase === "aiming" || state.phase === "flying" || state.phase === "settle") {
+    drawStick(ctx, state, view, camera, safeBottom);
+  }
   return camera;
 }
 
@@ -126,18 +134,9 @@ function drawTrail(ctx: CanvasRenderingContext2D, state: GameState): void {
   ctx.globalAlpha = 1;
 }
 
-function drawAim(ctx: CanvasRenderingContext2D, state: GameState): void {
+function drawTrajectory(ctx: CanvasRenderingContext2D, state: GameState): void {
   if (!state.aim) return;
-  const { origin, pull } = state.aim;
-  const finger = { x: origin.x - pull.x, y: origin.y - pull.y };
-  ctx.strokeStyle = "rgba(244, 241, 234, 0.35)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(origin.x, origin.y);
-  ctx.lineTo(finger.x, finger.y);
-  ctx.stroke();
-
-  const path = predictPath(state, pull);
+  const path = predictPath(state, state.aim.pull);
   path.forEach((p, i) => {
     ctx.globalAlpha = 1 - i / path.length;
     ctx.fillStyle = ACCENT;
@@ -145,6 +144,35 @@ function drawAim(ctx: CanvasRenderingContext2D, state: GameState): void {
     ctx.arc(p.x, p.y, 2.2, 0, Math.PI * 2);
     ctx.fill();
   });
+  ctx.globalAlpha = 1;
+}
+
+function drawStick(
+  ctx: CanvasRenderingContext2D,
+  state: GameState,
+  view: { w: number; h: number },
+  camera: Camera,
+  safeBottom: number,
+): void {
+  const pad = controlPad(view, safeBottom);
+  const active = state.phase === "aiming";
+  ctx.globalAlpha = active ? 1 : 0.35;
+  ctx.beginPath();
+  ctx.arc(pad.x, pad.y, MAX_PULL * camera.scale * 0.42, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(125, 240, 255, 0.35)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  const knob = state.aim
+    ? { x: pad.x + state.aim.pull.x * camera.scale, y: pad.y + state.aim.pull.y * camera.scale }
+    : pad;
+  ctx.beginPath();
+  ctx.arc(knob.x, knob.y, 18, 0, Math.PI * 2);
+  ctx.fillStyle = active ? "#e8fbff" : "rgba(232, 251, 255, 0.55)";
+  ctx.fill();
+  ctx.strokeStyle = ACCENT;
+  ctx.lineWidth = 2;
+  ctx.stroke();
   ctx.globalAlpha = 1;
 }
 

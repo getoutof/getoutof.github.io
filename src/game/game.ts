@@ -1,4 +1,4 @@
-import { aimFromPointer, worldFromClient } from "./input.ts";
+import { aimFromStick, clientOnCanvas, inControlZone } from "./input.ts";
 import { LEVELS, targetCircles, type LevelDef } from "./levels.ts";
 import { clone, LAUNCH_SCALE, MAX_SHOTS, WORLD, type Circle, type Vec } from "./math.ts";
 import { createBall, hitsCircle, isResting, isSupported, speed, stepWorld, type Ball, type World } from "./physics.ts";
@@ -32,6 +32,8 @@ export type GameState = {
   message: string;
   notice: string | null;
   noticeUntil: number;
+  banner: string | null;
+  bannerUntil: number;
 };
 
 type SfxHooks = {
@@ -78,6 +80,8 @@ export function resetLevel(index: number, phase: Phase = "aiming"): GameState {
     message: level.name,
     notice: null,
     noticeUntil: 0,
+    banner: phase === "aiming" ? level.name : null,
+    bannerUntil: phase === "aiming" ? 2.6 : 0,
   };
 }
 
@@ -88,15 +92,6 @@ export function layoutCamera(viewW: number, viewH: number): Camera {
     offsetX: (viewW - WORLD.w * scale) / 2,
     offsetY: (viewH - WORLD.h * scale) / 2,
   };
-}
-
-export function clientToWorld(
-  canvas: HTMLCanvasElement,
-  camera: Camera,
-  clientX: number,
-  clientY: number,
-): Vec {
-  return worldFromClient(clientX, clientY, canvas, camera.offsetX, camera.offsetY, camera.scale);
 }
 
 export function predictPath(state: GameState, pull: Vec, steps = 42): Vec[] {
@@ -121,14 +116,45 @@ export function predictPath(state: GameState, pull: Vec, steps = 42): Vec[] {
   return path;
 }
 
-export function pointerDown(state: GameState, world: Vec): void {
-  if (state.phase !== "aiming") return;
-  state.aim = aimFromPointer(state.world.ball.pos, world);
+export function controlPad(view: { w: number; h: number }, safeBottom: number): Vec {
+  return { x: view.w / 2, y: view.h - safeBottom - 58 };
 }
 
-export function pointerMove(state: GameState, world: Vec): void {
+export function pointerDownStick(
+  state: GameState,
+  canvas: HTMLCanvasElement,
+  camera: Camera,
+  view: { w: number; h: number },
+  safeBottom: number,
+  clientX: number,
+  clientY: number,
+): void {
+  if (state.phase !== "aiming") return;
+  const pad = controlPad(view, safeBottom);
+  const pointer = clientOnCanvas(clientX, clientY, canvas);
+  if (!inControlZone(pad, pointer, view.h)) return;
+  state.aim = {
+    origin: state.world.ball.pos,
+    pull: aimFromStick(pad, pointer, camera.scale),
+  };
+}
+
+export function pointerMoveStick(
+  state: GameState,
+  canvas: HTMLCanvasElement,
+  camera: Camera,
+  view: { w: number; h: number },
+  safeBottom: number,
+  clientX: number,
+  clientY: number,
+): void {
   if (state.phase !== "aiming" || !state.aim) return;
-  state.aim = aimFromPointer(state.world.ball.pos, world);
+  const pad = controlPad(view, safeBottom);
+  const pointer = clientOnCanvas(clientX, clientY, canvas);
+  state.aim = {
+    origin: state.world.ball.pos,
+    pull: aimFromStick(pad, pointer, camera.scale),
+  };
 }
 
 export function pointerUp(state: GameState, onLaunch: () => void): void {
@@ -163,6 +189,7 @@ export function tick(state: GameState, dt: number, sfx: SfxHooks): void {
   state.time += dt;
   state.shake = Math.max(0, state.shake - dt * 18);
   if (state.notice && state.time >= state.noticeUntil) state.notice = null;
+  if (state.banner && state.time >= state.bannerUntil) state.banner = null;
   updateParticles(state, dt);
 
   if (state.phase === "title") {

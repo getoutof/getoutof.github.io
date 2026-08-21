@@ -1,4 +1,4 @@
-import { createGame, nextLevel, pointerDown, pointerMove, pointerUp, predictPath, remainingShots, resetLevel, tick } from "./game.ts";
+import { createGame, nextLevel, pointerUp, predictPath, remainingShots, resetLevel, tick } from "./game.ts";
 import { GROUND_TOP, LEVELS } from "./levels.ts";
 import { MAX_SHOTS } from "./math.ts";
 import { createBall, hitsCircle, isSupported, stepWorld } from "./physics.ts";
@@ -17,9 +17,8 @@ if (!isSupported(world.ball, world.platforms)) throw new Error("ball should be s
 
 const g = resetLevel(0);
 if (remainingShots(g) !== MAX_SHOTS) throw new Error("level should start with full attempts");
-pointerDown(g, { x: start.x, y: start.y + 40 });
-pointerMove(g, { x: start.x, y: start.y + 90 });
-if (!g.aim) throw new Error("aim not started");
+if (g.banner !== LEVELS[0].name) throw new Error("level start should show name banner");
+g.aim = { origin: g.world.ball.pos, pull: { x: 40, y: -90 } };
 const path = predictPath(g, g.aim.pull);
 if (path.length < 5) throw new Error("path too short");
 pointerUp(g, () => {});
@@ -42,6 +41,7 @@ g.shots = 2;
 const nxt = nextLevel(g);
 if (nxt.shots !== 0) throw new Error("next level should reset attempts");
 if (remainingShots(nxt) !== MAX_SHOTS) throw new Error("next level should restore 3 attempts");
+if (nxt.banner !== LEVELS[1].name) throw new Error("next level should flash its name");
 
 if (!hitsCircle({ pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, r: 5 }, { x: 3, y: 0, r: 3 })) {
   throw new Error("hitsCircle false negative");
@@ -49,5 +49,6 @@ if (!hitsCircle({ pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, r: 5 }, { x: 3, y: 0
 
 const title = createGame();
 if (title.phase !== "title") throw new Error("expected title");
+if (title.banner) throw new Error("title should not show level banner");
 
 console.log("ok", { phase: g.phase, shots: g.shots, collected: g.collected, ball: g.world.ball.pos });

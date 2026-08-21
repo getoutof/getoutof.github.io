@@ -22,3 +22,9 @@ export function lockPageChrome(): void {
     { passive: false },
   );
 }
+
+export function safeAreaBottom(): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue("--safe-bottom");
+  const n = Number.parseFloat(raw);
+  return Number.isFinite(n) ? n : 0;
+}

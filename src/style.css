@@ -5,6 +5,7 @@
   --muted: #9aa3b5;
   --accent: #7df0ff;
   --gold: #ffb703;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 * {
@@ -101,6 +102,37 @@ body {
   display: none;
 }
 
+.banner {
+  position: fixed;
+  top: calc(88px + env(safe-area-inset-top, 0px));
+  left: 20px;
+  right: 20px;
+  z-index: 4;
+  text-align: center;
+  pointer-events: none;
+}
+
+.banner[hidden] {
+  display: none;
+}
+
+.banner-kicker {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.banner-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(28px, 8vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-shadow: 0 8px 24px rgb(7 8 15 / 0.8);
+}
+
 .overlay {
   position: fixed;
   inset: 0;
@@ -144,6 +176,10 @@ h1 {
   color: var(--muted);
   font-size: 16px;
   line-height: 1.45;
+}
+
+.lead:empty {
+  display: none;
 }
 
 .primary {

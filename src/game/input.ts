@@ -1,10 +1,5 @@
 import { clampVec, MAX_PULL, type Vec } from "./math.ts";
 
-export type Pointer = {
-  id: number;
-  world: Vec;
-};
-
 export type Aim = {
   origin: Vec;
   pull: Vec;
@@ -25,10 +20,22 @@ export function worldFromClient(
   };
 }
 
-export function aimFromPointer(ball: Vec, pointer: Vec): Aim {
-  const pull = clampVec(
-    { x: ball.x - pointer.x, y: ball.y - pointer.y },
+export function clientOnCanvas(clientX: number, clientY: number, canvas: HTMLCanvasElement): Vec {
+  const rect = canvas.getBoundingClientRect();
+  return { x: clientX - rect.left, y: clientY - rect.top };
+}
+
+export function aimFromStick(pad: Vec, pointer: Vec, scale: number): Vec {
+  return clampVec(
+    {
+      x: (pointer.x - pad.x) / scale,
+      y: (pointer.y - pad.y) / scale,
+    },
     MAX_PULL,
   );
-  return { origin: ball, pull };
+}
+
+export function inControlZone(pad: Vec, pointer: Vec, viewH: number): boolean {
+  if (Math.hypot(pointer.x - pad.x, pointer.y - pad.y) < 130) return true;
+  return pointer.y > viewH - 160;
 }

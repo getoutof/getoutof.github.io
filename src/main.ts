@@ -1,15 +1,14 @@
 import "./style.css";
 import { createAudio } from "./game/audio.ts";
 import {
-  clientToWorld,
   createGame,
   currentLevel,
   layoutCamera,
   LEVELS,
   MAX_SHOTS,
   nextLevel,
-  pointerDown,
-  pointerMove,
+  pointerDownStick,
+  pointerMoveStick,
   pointerUp,
   remainingShots,
   resetLevel,
@@ -18,7 +17,7 @@ import {
   type GameState,
 } from "./game/game.ts";
 import { draw, resizeCanvas } from "./game/render.ts";
-import { haptic, lockPageChrome } from "./platform.ts";
+import { haptic, lockPageChrome, safeAreaBottom } from "./platform.ts";
 
 function required<T>(value: T | null, message: string): T {
   if (!value) throw new Error(message);
@@ -33,6 +32,9 @@ const restart = required(document.querySelector<HTMLButtonElement>("#restart"), 
 const levelLabel = required(document.querySelector<HTMLSpanElement>("#level-label"), "Нет level");
 const shotLabel = required(document.querySelector<HTMLSpanElement>("#shot-label"), "Нет shots");
 const toast = required(document.querySelector<HTMLDivElement>("#toast"), "Нет toast");
+const banner = required(document.querySelector<HTMLDivElement>("#banner"), "Нет banner");
+const bannerKicker = required(banner.querySelector<HTMLParagraphElement>(".banner-kicker"), "Нет banner kicker");
+const bannerTitle = required(banner.querySelector<HTMLParagraphElement>(".banner-title"), "Нет banner title");
 const ctx = required(canvas.getContext("2d"), "Canvas 2D недоступен");
 
 lockPageChrome();
@@ -69,9 +71,8 @@ function onPlay(): void {
 }
 
 function syncHud(): void {
-  const level = currentLevel(state);
   const left = remainingShots(state);
-  levelLabel.textContent = `Уровень ${state.levelIndex + 1} · ${level.name}`;
+  levelLabel.textContent = `Уровень ${state.levelIndex + 1}`;
   shotLabel.textContent = `Попытки ${left} из ${MAX_SHOTS}`;
   if (state.notice && overlay.hidden) {
     toast.hidden = false;
@@ -80,19 +81,29 @@ function syncHud(): void {
     toast.hidden = true;
     toast.textContent = "";
   }
+  if (state.banner && overlay.hidden) {
+    const fade = Math.min(1, Math.max(0, (state.bannerUntil - state.time) / 0.55));
+    banner.hidden = false;
+    bannerKicker.textContent = `Уровень ${state.levelIndex + 1}`;
+    bannerTitle.textContent = state.banner;
+    banner.style.opacity = String(fade);
+  } else {
+    banner.hidden = true;
+    banner.style.opacity = "0";
+  }
 }
 
-function toWorld(event: PointerEvent) {
-  return clientToWorld(canvas, camera, event.clientX, event.clientY);
+function stickArgs(event: PointerEvent) {
+  return [canvas, camera, view, safeAreaBottom(), event.clientX, event.clientY] as const;
 }
 
 canvas.addEventListener("pointerdown", (event) => {
   canvas.setPointerCapture(event.pointerId);
-  pointerDown(state, toWorld(event));
+  pointerDownStick(state, ...stickArgs(event));
 });
 
 canvas.addEventListener("pointermove", (event) => {
-  pointerMove(state, toWorld(event));
+  pointerMoveStick(state, ...stickArgs(event));
 });
 
 canvas.addEventListener("pointerup", () => {
@@ -133,14 +144,14 @@ function frame(now: number): void {
   last = now;
   const prev = state.phase;
   tick(state, dt, sfx);
-  camera = draw(ctx, state, view);
+  camera = draw(ctx, state, view, safeAreaBottom());
   if (state.phase !== prev) {
     if (state.phase === "win") {
       haptic("heavy");
       const lastLevel = state.levelIndex === LEVELS.length - 1;
       showOverlay(
         lastLevel ? "Орбита закрыта" : "Маяки собраны",
-        lastLevel ? "Все шесть уровней пройдены. Можно крутить заново." : "Следующий уровень — снова 3 попытки.",
+        lastLevel ? "Все шесть уровней пройдены." : "",
         lastLevel ? "Сначала" : "Дальше",
       );
     }
