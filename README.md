@@ -2,6 +2,10 @@
 
 Мобильная слэнгшот-игра на Canvas: один веб-код, позже тот же билд в WebView на Android и iOS через Capacitor.
 
+**Поиграть:** [getoutof.github.io/trajectry](https://getoutof.github.io/trajectry/)
+
+Пуш в `main` или в `cursor/**` собирает `dist` и выкладывает на GitHub Pages (Actions). Репозиторий сейчас приватный: страница видна тем, у кого есть доступ. На бесплатном GitHub Pages для private-репо может быть недоступен — тогда либо Pro/Team, либо сделать репозиторий public. Если деплой не стартовал: Settings → Pages → Source → **GitHub Actions**.
+
 ## Лицензия и монетизация
 
 Исходники **не MIT и не open source**. Юридический текст — [LICENSE](LICENSE) (Trajectry Source License 1.0). Кратко, без силы договора:
