@@ -63,6 +63,12 @@ body {
   color: var(--muted);
 }
 
+.hud-actions {
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
 .ghost,
 .primary {
   pointer-events: auto;
@@ -142,6 +148,7 @@ body {
   padding: calc(12vh + env(safe-area-inset-top, 0px)) 20px calc(28px + env(safe-area-inset-bottom, 0px));
   background:
     linear-gradient(180deg, rgb(7 8 15 / 0.2), rgb(7 8 15 / 0.78) 42%, rgb(7 8 15 / 0.94));
+  touch-action: pan-y;
 }
 
 .overlay[hidden],
@@ -196,6 +203,76 @@ h1 {
 }
 
 .primary:active,
-.ghost:active {
+.ghost:active,
+.level-btn:active {
   transform: scale(0.98);
+}
+
+.stars {
+  color: var(--gold);
+  letter-spacing: 0.14em;
+}
+
+.stars.empty {
+  color: var(--muted);
+  opacity: 0.4;
+}
+
+.stars-result {
+  margin: 4px 0 8px;
+  color: var(--gold);
+  font-size: 34px;
+  letter-spacing: 0.16em;
+}
+
+.levels {
+  list-style: none;
+  margin: 18px 0 12px;
+  padding: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.level-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 8px;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 0.06);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.level-index {
+  flex: 0 0 28px;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.level-meta {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.level-name {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

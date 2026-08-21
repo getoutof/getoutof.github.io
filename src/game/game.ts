@@ -34,6 +34,7 @@ export type GameState = {
   noticeUntil: number;
   banner: string | null;
   bannerUntil: number;
+  rumbleAfter: number;
 };
 
 type SfxHooks = {
@@ -82,6 +83,7 @@ export function resetLevel(index: number, phase: Phase = "aiming"): GameState {
     noticeUntil: 0,
     banner: phase === "aiming" ? level.name : null,
     bannerUntil: phase === "aiming" ? 2.6 : 0,
+    rumbleAfter: 0,
   };
 }
 
@@ -175,13 +177,21 @@ export function pointerUp(state: GameState, onLaunch: (power: number) => void): 
   state.phase = "flying";
   state.shots += 1;
   state.trail = [];
-  state.shake = Math.max(state.shake, 2.4 + charge * 8.5);
+  state.rumbleAfter = state.time + 0.2 + (1 - charge) * 0.08;
   onLaunch(power);
 }
 
 export function flightRush(state: GameState): number {
   if (state.phase !== "flying" && state.phase !== "settle") return 0;
-  return clamp((speed(state.world.ball) - 140) / 860, 0, 1);
+  return clamp((speed(state.world.ball) - 320) / 700, 0, 1);
+}
+
+export function heatAmount(state: GameState): number {
+  if (state.aim) return clamp(Math.hypot(state.aim.pull.x, state.aim.pull.y) / MAX_PULL, 0, 1);
+  if (state.phase === "flying" || state.phase === "settle") {
+    return clamp((speed(state.world.ball) - 50) / 950, 0, 1);
+  }
+  return 0;
 }
 
 export function remainingShots(state: GameState): number {
@@ -199,9 +209,10 @@ export function tick(state: GameState, dt: number, sfx: SfxHooks): void {
   state.shake = Math.max(0, state.shake - dt * 18);
   if (state.phase === "aiming" && state.aim) {
     const charge = clamp(Math.hypot(state.aim.pull.x, state.aim.pull.y) / MAX_PULL, 0, 1);
-    state.shake = Math.max(state.shake, charge * charge * 4.2);
+    const late = clamp((charge - 0.68) / 0.32, 0, 1);
+    state.shake = Math.max(state.shake, late * late * 5.2);
   }
-  if (state.phase === "flying" || state.phase === "settle") {
+  if ((state.phase === "flying" || state.phase === "settle") && state.time >= state.rumbleAfter) {
     const rush = flightRush(state);
     state.shake = Math.min(9, Math.max(state.shake, rush * rush * 6.8));
   }

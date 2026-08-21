@@ -1,8 +1,10 @@
-import { controlPad, createGame, flightRush, layoutCamera, nextLevel, pointerUp, predictPath, remainingShots, resetLevel, tick } from "./game.ts";
-import { aimFromStick, knobFromPull, STICK_OVERSHOOT, stickKnobTravel, stickWellRadius } from "./input.ts";
+import { controlPad, createGame, flightRush, heatAmount, layoutCamera, nextLevel, pointerUp, predictPath, remainingShots, resetLevel, tick } from "./game.ts";
+import { aimFromStick, knobFromPull, STICK_KNOB_R } from "./input.ts";
 import { GROUND_TOP, LEVELS } from "./levels.ts";
 import { MAX_PULL, MAX_SHOTS } from "./math.ts";
 import { createBall, hitsCircle, isSupported, stepWorld } from "./physics.ts";
+import { rememberStars, starsFromShots } from "./progress.ts";
+import { heatColor } from "./render.ts";
 
 const silent = { bounce() {}, collect() {}, win() {}, fail() {} };
 const start = LEVELS[0].ball;
@@ -59,25 +61,48 @@ const groundY = cam.offsetY + GROUND_TOP * cam.scale;
 const midY = (groundY + view.h) / 2;
 if (Math.abs(pad.y - midY) > 0.01) throw new Error(`stick should sit between ground and screen, got ${pad.y} expected ${midY}`);
 
-const well = stickWellRadius(cam.scale);
 const far = { x: pad.x + 400, y: pad.y + 400 };
 const pull = aimFromStick(pad, far, cam.scale);
 if (Math.abs(Math.hypot(pull.x, pull.y) - MAX_PULL) > 0.01) throw new Error("full drag should reach max pull");
-const knob = knobFromPull(pad, pull, cam.scale);
-const knobDist = Math.hypot(knob.x - pad.x, knob.y - pad.y);
-const maxKnob = well + STICK_OVERSHOOT;
-if (knobDist > maxKnob + 0.5) throw new Error(`knob escaped ${knobDist} > ${maxKnob}`);
-if (knobDist < maxKnob - 0.5) throw new Error(`full pull should sit a half-radius past the well, got ${knobDist}`);
-if (Math.abs(stickKnobTravel(cam.scale) - maxKnob) > 0.01) throw new Error("stickKnobTravel should be well + half knob");
+const downPull = { x: 0, y: -MAX_PULL };
+const downKnob = knobFromPull(pad, downPull, view, 0);
+if (Math.abs(downKnob.y - (view.h - STICK_KNOB_R)) > 0.6) {
+  throw new Error(`max down pull should reach screen edge, knob.y=${downKnob.y} edge=${view.h - STICK_KNOB_R}`);
+}
+const leftPull = { x: MAX_PULL, y: 0 };
+const leftKnob = knobFromPull(pad, leftPull, view, 0);
+if (Math.abs(leftKnob.x - STICK_KNOB_R) > 0.6) {
+  throw new Error(`max left pull should reach screen edge, knob.x=${leftKnob.x}`);
+}
 const near = { x: pad.x + 20, y: pad.y };
 const shortPull = aimFromStick(pad, near, cam.scale);
 if (Math.hypot(shortPull.x, shortPull.y) >= MAX_PULL * 0.5) throw new Error("short drag should stay below half power");
+const shortKnob = knobFromPull(pad, shortPull, view, 0);
+if (Math.hypot(shortKnob.x - pad.x, shortKnob.y - pad.y) > 50) throw new Error("short pull should not sit on the screen edge");
+
+const delayed = resetLevel(0);
+delayed.aim = { origin: delayed.world.ball.pos, pull: { x: 0, y: -MAX_PULL } };
+pointerUp(delayed, () => {});
+tick(delayed, 1 / 60, silent);
+if (delayed.shake > 0.4) throw new Error(`shake should wait after launch, got ${delayed.shake}`);
+for (let i = 0; i < 18; i += 1) tick(delayed, 1 / 60, silent);
+if (delayed.phase === "flying" && delayed.shake < 1.2) throw new Error(`late flight should rumble, got ${delayed.shake}`);
 
 const rush = resetLevel(0);
 rush.phase = "flying";
 rush.world.ball.vel = { x: 920, y: -180 };
 tick(rush, 1 / 60, silent);
 if (flightRush(rush) < 0.7) throw new Error(`expected strong rush, got ${flightRush(rush)}`);
+if (heatAmount(rush) < 0.7) throw new Error(`expected hot color, got ${heatAmount(rush)}`);
 if (rush.shake < 2) throw new Error(`fast flight should shake, got ${rush.shake}`);
+
+if (starsFromShots(1) !== 3 || starsFromShots(2) !== 2 || starsFromShots(3) !== 1) {
+  throw new Error("stars should be 3/2/1 by attempt");
+}
+const best = rememberStars(0, 2);
+if (best[0] !== 2) throw new Error(`best stars should record 2, got ${best[0]}`);
+if (!heatColor(1).includes("255") || !heatColor(1).includes("90")) {
+  throw new Error(`max heat should be coral-red, got ${heatColor(1)}`);
+}
 
 console.log("ok", { phase: g.phase, shots: g.shots, collected: g.collected, ball: g.world.ball.pos });

@@ -1,6 +1,6 @@
-import { controlPad, currentLevel, flightRush, layoutCamera, predictPath, remainingTargets, type Camera, type GameState } from "./game.ts";
+import { controlPad, currentLevel, flightRush, heatAmount, layoutCamera, predictPath, remainingTargets, type Camera, type GameState } from "./game.ts";
 import { knobFromPull, STICK_KNOB_R, stickWellRadius } from "./input.ts";
-import { BALL_RADIUS, MAX_PULL, WORLD } from "./math.ts";
+import { BALL_RADIUS, WORLD } from "./math.ts";
 
 const BG = "#07080f";
 const BALL = "#e8fbff";
@@ -8,6 +8,30 @@ const ACCENT = "#7df0ff";
 const GOLD = "#ffb703";
 const PLATFORM = "#1a2233";
 const PLATFORM_TOP = "#2b3750";
+
+type Rgb = { r: number; g: number; b: number };
+
+const CYAN_RGB: Rgb = { r: 125, g: 240, b: 255 };
+const GOLD_RGB: Rgb = { r: 255, g: 183, b: 3 };
+const HOT_RGB: Rgb = { r: 255, g: 90, b: 78 };
+
+function mixRgb(a: Rgb, b: Rgb, t: number): Rgb {
+  return {
+    r: a.r + (b.r - a.r) * t,
+    g: a.g + (b.g - a.g) * t,
+    b: a.b + (b.b - a.b) * t,
+  };
+}
+
+function rgbCss(c: Rgb, a = 1): string {
+  return a < 1 ? `rgba(${c.r}, ${c.g}, ${c.b}, ${a})` : `rgb(${c.r}, ${c.g}, ${c.b})`;
+}
+
+export function heatColor(t: number, alpha = 1): string {
+  const u = Math.max(0, Math.min(1, t));
+  const c = u < 0.55 ? mixRgb(CYAN_RGB, GOLD_RGB, u / 0.55) : mixRgb(GOLD_RGB, HOT_RGB, (u - 0.55) / 0.45);
+  return rgbCss(c, alpha);
+}
 
 const stars = Array.from({ length: 70 }, (_, i) => ({
   x: (i * 97 + 13) % WORLD.w,
@@ -131,10 +155,11 @@ function drawTargets(ctx: CanvasRenderingContext2D, state: GameState): void {
 
 function drawTrail(ctx: CanvasRenderingContext2D, state: GameState): void {
   const rush = flightRush(state);
+  const heat = heatAmount(state);
   state.trail.forEach((p, i) => {
     const t = i / Math.max(1, state.trail.length);
     ctx.globalAlpha = t * (0.4 + rush * 0.5);
-    ctx.fillStyle = ACCENT;
+    ctx.fillStyle = heatColor(heat * (0.35 + t * 0.65));
     ctx.beginPath();
     ctx.arc(p.x, p.y, 2.4 + rush * 4.2 * t, 0, Math.PI * 2);
     ctx.fill();
@@ -144,10 +169,11 @@ function drawTrail(ctx: CanvasRenderingContext2D, state: GameState): void {
 
 function drawTrajectory(ctx: CanvasRenderingContext2D, state: GameState): void {
   if (!state.aim) return;
+  const heat = heatAmount(state);
   const path = predictPath(state, state.aim.pull);
   path.forEach((p, i) => {
     ctx.globalAlpha = 1 - i / path.length;
-    ctx.fillStyle = ACCENT;
+    ctx.fillStyle = heatColor(heat);
     ctx.beginPath();
     ctx.arc(p.x, p.y, 2.2, 0, Math.PI * 2);
     ctx.fill();
@@ -164,20 +190,20 @@ function drawStick(
 ): void {
   const pad = controlPad(view, camera, safeBottom);
   const active = state.phase === "aiming";
-  const charge = state.aim ? Math.min(1, Math.hypot(state.aim.pull.x, state.aim.pull.y) / MAX_PULL) : 0;
+  const heat = heatAmount(state);
   ctx.globalAlpha = active ? 1 : 0.35;
   ctx.beginPath();
   ctx.arc(pad.x, pad.y, stickWellRadius(camera.scale), 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(125, 240, 255, ${0.32 + charge * 0.5})`;
-  ctx.lineWidth = 2 + charge * 2.4;
+  ctx.strokeStyle = heatColor(heat, 0.32 + heat * 0.5);
+  ctx.lineWidth = 2 + heat * 2.4;
   ctx.stroke();
 
-  const knob = state.aim ? knobFromPull(pad, state.aim.pull, camera.scale) : pad;
+  const knob = state.aim ? knobFromPull(pad, state.aim.pull, view, safeBottom) : pad;
   ctx.beginPath();
   ctx.arc(knob.x, knob.y, STICK_KNOB_R, 0, Math.PI * 2);
-  ctx.fillStyle = active ? "#e8fbff" : "rgba(232, 251, 255, 0.55)";
+  ctx.fillStyle = active ? heatColor(heat) : "rgba(232, 251, 255, 0.55)";
   ctx.fill();
-  ctx.strokeStyle = ACCENT;
+  ctx.strokeStyle = heat > 0.04 ? heatColor(Math.min(1, heat + 0.12)) : ACCENT;
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.globalAlpha = 1;
@@ -186,7 +212,8 @@ function drawStick(
 function drawBall(ctx: CanvasRenderingContext2D, state: GameState): void {
   const { pos, vel } = state.world.ball;
   const rush = flightRush(state);
-  drawSpeedLines(ctx, pos.x, pos.y, vel.x, vel.y, rush, state.time);
+  const heat = heatAmount(state);
+  drawSpeedLines(ctx, pos.x, pos.y, vel.x, vel.y, rush, heat, state.time);
   ctx.save();
   ctx.translate(pos.x, pos.y);
   if (rush > 0.04) {
@@ -194,12 +221,12 @@ function drawBall(ctx: CanvasRenderingContext2D, state: GameState): void {
     ctx.rotate(Math.atan2(vel.y, vel.x));
     ctx.scale(stretch, 1 / Math.sqrt(stretch));
   }
-  ctx.shadowColor = ACCENT;
+  ctx.shadowColor = heatColor(heat);
   ctx.shadowBlur = 18 + rush * 26;
   const g = ctx.createRadialGradient(-3, -4, 2, 0, 0, BALL_RADIUS);
   g.addColorStop(0, "#ffffff");
-  g.addColorStop(0.45, BALL);
-  g.addColorStop(1, "#5bb8c8");
+  g.addColorStop(0.42, heat < 0.08 ? BALL : heatColor(heat * 0.55));
+  g.addColorStop(1, heat < 0.08 ? "#5bb8c8" : heatColor(heat));
   ctx.fillStyle = g;
   ctx.beginPath();
   ctx.arc(0, 0, BALL_RADIUS, 0, Math.PI * 2);
@@ -215,6 +242,7 @@ function drawSpeedLines(
   vx: number,
   vy: number,
   rush: number,
+  heat: number,
   time: number,
 ): void {
   if (rush < 0.08) return;
@@ -223,7 +251,7 @@ function drawSpeedLines(
   const ux = vx / s;
   const uy = vy / s;
   const n = 5 + Math.floor(rush * 9);
-  ctx.strokeStyle = ACCENT;
+  ctx.strokeStyle = heatColor(heat);
   ctx.lineWidth = 1.2 + rush * 1.6;
   ctx.lineCap = "round";
   for (let i = 0; i < n; i += 1) {
