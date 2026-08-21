@@ -4,7 +4,7 @@
 
 **Поиграть:** [getoutof.github.io](https://getoutof.github.io/)
 
-Пуш в `main` или `cursor/**` собирает `dist` и выкладывает на GitHub Pages. Репозиторий — user-site (`getoutof.github.io`), поэтому в **[Settings → Pages](https://github.com/getoutof/getoutof.github.io/settings/pages)** Source должен быть **GitHub Actions**, не «Deploy from a branch».
+Пуш в `cursor/**` собирает `dist` и публикует его в `main` — так работает user-site Pages (legacy, корень `main`).
 
 ## Лицензия и монетизация
 
