@@ -7,53 +7,63 @@ export type Sfx = {
   fail: () => void;
 };
 
+const A2 = 110.0;
 const D3 = 146.83;
 const F3 = 174.61;
 const A3 = 220.0;
 const Bb3 = 233.08;
+const C4 = 261.63;
 const D4 = 293.66;
 const E4 = 329.63;
 const F4 = 349.23;
-const G4 = 392.0;
 const A4 = 440.0;
 const Bb4 = 466.16;
 const C5 = 523.25;
 const D5 = 587.33;
 
 type Hit = { t: number; f: number; v: number; d: number };
+type Chord = { t: number; f: number[]; v: number; d: number };
 
-const RIFF: Hit[] = [
-  { t: 0, f: D3, v: 0.13, d: 2.4 },
-  { t: 0, f: D4, v: 0.1, d: 1.5 },
-  { t: 0.55, f: F4, v: 0.11, d: 1.2 },
-  { t: 1.1, f: A4, v: 0.13, d: 1.3 },
-  { t: 1.65, f: D5, v: 0.17, d: 1.9 },
-  { t: 2.45, f: C5, v: 0.1, d: 0.7 },
-  { t: 2.85, f: Bb4, v: 0.11, d: 0.8 },
-  { t: 3.3, f: A4, v: 0.1, d: 1.1 },
-  { t: 4.05, f: F3, v: 0.11, d: 2.1 },
-  { t: 4.05, f: F4, v: 0.1, d: 1.2 },
-  { t: 4.65, f: E4, v: 0.09, d: 0.65 },
-  { t: 5.1, f: D4, v: 0.11, d: 1.4 },
-  { t: 5.75, f: A3, v: 0.09, d: 1.2 },
-  { t: 6.35, f: Bb3, v: 0.1, d: 1.1 },
-  { t: 6.95, f: A3, v: 0.08, d: 1.7 },
-  { t: 8.05, f: D5, v: 0.16, d: 0.32 },
-  { t: 8.22, f: C5, v: 0.14, d: 0.32 },
-  { t: 8.39, f: Bb4, v: 0.13, d: 0.32 },
-  { t: 8.56, f: A4, v: 0.12, d: 0.32 },
-  { t: 8.73, f: G4, v: 0.12, d: 0.32 },
-  { t: 8.9, f: F4, v: 0.11, d: 0.32 },
-  { t: 9.07, f: E4, v: 0.11, d: 0.32 },
-  { t: 9.24, f: D4, v: 0.14, d: 1.6 },
-  { t: 9.24, f: D3, v: 0.12, d: 2.2 },
-  { t: 10.5, f: A4, v: 0.08, d: 1.7 },
-  { t: 11.35, f: F4, v: 0.08, d: 1.9 },
-  { t: 12.3, f: D4, v: 0.1, d: 2.6 },
-  { t: 12.3, f: A3, v: 0.07, d: 2.6 },
+const PIANO: Hit[] = [
+  { t: 0, f: D3, v: 0.12, d: 5.5 },
+  { t: 0, f: D4, v: 0.09, d: 4.2 },
+  { t: 3.2, f: F4, v: 0.1, d: 3.8 },
+  { t: 6.4, f: A4, v: 0.11, d: 4.0 },
+  { t: 10.2, f: D5, v: 0.13, d: 5.2 },
+  { t: 14.0, f: C5, v: 0.08, d: 2.6 },
+  { t: 16.2, f: Bb4, v: 0.09, d: 3.2 },
+  { t: 18.8, f: A4, v: 0.08, d: 4.0 },
+  { t: 22.0, f: F3, v: 0.11, d: 5.0 },
+  { t: 22.0, f: F4, v: 0.09, d: 3.6 },
+  { t: 25.8, f: E4, v: 0.08, d: 2.8 },
+  { t: 28.5, f: D4, v: 0.1, d: 4.2 },
+  { t: 32.0, f: A3, v: 0.08, d: 3.4 },
+  { t: 34.8, f: Bb3, v: 0.09, d: 3.6 },
+  { t: 37.6, f: A3, v: 0.07, d: 4.5 },
+  { t: 41.0, f: D4, v: 0.1, d: 5.0 },
+  { t: 44.5, f: F4, v: 0.09, d: 4.4 },
+  { t: 48.0, f: E4, v: 0.08, d: 3.5 },
+  { t: 51.0, f: D4, v: 0.09, d: 4.8 },
+  { t: 51.0, f: A3, v: 0.06, d: 4.8 },
+  { t: 55.0, f: A4, v: 0.06, d: 3.2 },
+  { t: 57.4, f: F4, v: 0.07, d: 3.8 },
+  { t: 59.2, f: D4, v: 0.08, d: 4.5 },
 ];
 
-const LOOP = 14.8;
+const GUITAR: Chord[] = [
+  { t: 2.4, f: [D3, A3], v: 0.07, d: 2.4 },
+  { t: 8.6, f: [A3, D4], v: 0.065, d: 2.2 },
+  { t: 15.4, f: [F3, C4], v: 0.07, d: 2.6 },
+  { t: 23.5, f: [D3, F3], v: 0.06, d: 2.3 },
+  { t: 30.8, f: [A2, D3], v: 0.07, d: 2.8 },
+  { t: 39.2, f: [D4, A4], v: 0.055, d: 2.5 },
+  { t: 46.6, f: [F3, Bb3], v: 0.065, d: 2.4 },
+  { t: 53.8, f: [D3, A3], v: 0.06, d: 3.0 },
+];
+
+const KICK = [0.04, 7.9, 16.05, 24.1, 32.0, 40.15, 48.05, 56.2];
+
+const LOOP = 61;
 
 export function createAudio(): Sfx {
   let ctx: AudioContext | null = null;
@@ -102,7 +112,7 @@ export function createAudio(): Sfx {
       osc.type = "sine";
       osc.frequency.value = freq * mult;
       g.gain.setValueAtTime(0.0001, when);
-      g.gain.linearRampToValueAtTime(velocity * amp, when + 0.014);
+      g.gain.linearRampToValueAtTime(velocity * amp, when + 0.018);
       g.gain.exponentialRampToValueAtTime(0.0001, when + decay);
       osc.connect(g).connect(ac.destination);
       osc.start(when);
@@ -110,8 +120,56 @@ export function createAudio(): Sfx {
     }
   };
 
-  const playRiff = (origin: number) => {
-    for (const hit of RIFF) piano(hit.f, origin + hit.t, hit.v, hit.d);
+  const guitar = (freq: number, when: number, velocity: number, decay: number) => {
+    const ac = get();
+    const voices: [OscillatorType, number, number][] = [
+      ["sawtooth", 0, 1],
+      ["triangle", 8, 0.55],
+    ];
+    for (const [type, cents, amp] of voices) {
+      const osc = ac.createOscillator();
+      const g = ac.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      osc.detune.value = cents;
+      g.gain.setValueAtTime(0.0001, when);
+      g.gain.linearRampToValueAtTime(velocity * amp, when + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + decay);
+      osc.connect(g).connect(ac.destination);
+      osc.start(when);
+      osc.stop(when + decay + 0.05);
+    }
+  };
+
+  const kick = (when: number) => {
+    const ac = get();
+    const osc = ac.createOscillator();
+    const g = ac.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(118, when);
+    osc.frequency.exponentialRampToValueAtTime(42, when + 0.16);
+    g.gain.setValueAtTime(0.22, when);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + 0.42);
+    osc.connect(g).connect(ac.destination);
+    osc.start(when);
+    osc.stop(when + 0.45);
+    const click = ac.createOscillator();
+    const cg = ac.createGain();
+    click.type = "triangle";
+    click.frequency.value = 720;
+    cg.gain.setValueAtTime(0.04, when);
+    cg.gain.exponentialRampToValueAtTime(0.0001, when + 0.03);
+    click.connect(cg).connect(ac.destination);
+    click.start(when);
+    click.stop(when + 0.04);
+  };
+
+  const playLoop = (origin: number) => {
+    for (const hit of PIANO) piano(hit.f, origin + hit.t, hit.v, hit.d);
+    for (const chord of GUITAR) {
+      for (const freq of chord.f) guitar(freq, origin + chord.t, chord.v, chord.d);
+    }
+    for (const t of KICK) kick(origin + t);
   };
 
   return {
@@ -120,12 +178,12 @@ export function createAudio(): Sfx {
       void ac.resume();
       if (!scoreOn) {
         scoreOn = true;
-        hold(D3, "sine", 0.03);
-        hold(F3, "sine", 0.018);
-        hold(A3, "sine", 0.016);
-        playRiff(ac.currentTime + 0.05);
+        hold(D3, "sine", 0.024);
+        hold(F3, "sine", 0.014);
+        hold(A3, "sine", 0.012);
+        playLoop(ac.currentTime + 0.05);
         const loop = () => {
-          playRiff(get().currentTime + 0.02);
+          playLoop(get().currentTime + 0.02);
           window.setTimeout(loop, LOOP * 1000);
         };
         window.setTimeout(loop, LOOP * 1000);
