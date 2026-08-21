@@ -1,5 +1,5 @@
 export type Sfx = {
-  resume: () => Promise<void>;
+  resume: () => void;
   launch: () => void;
   bounce: () => void;
   collect: () => void;
@@ -7,7 +7,7 @@ export type Sfx = {
   fail: () => void;
 };
 
-const GLASS = [146.83, 155.56, 174.61, 196.0, 220.0, 233.08, 277.18, 293.66];
+const GLASS = [146.83, 174.61, 196.0, 220.0, 233.08, 293.66, 349.23];
 
 export function createAudio(): Sfx {
   let ctx: AudioContext | null = null;
@@ -32,9 +32,10 @@ export function createAudio(): Sfx {
   };
 
   return {
-    async resume() {
+    resume() {
       const ac = get();
-      if (ac.state === "suspended") await ac.resume();
+      void ac.resume();
+      unlock(ac);
       if (!scoreOn) {
         scoreOn = true;
         startScore(ac);
@@ -62,43 +63,49 @@ export function createAudio(): Sfx {
   };
 }
 
+function unlock(ac: AudioContext): void {
+  const buffer = ac.createBuffer(1, 1, ac.sampleRate);
+  const src = ac.createBufferSource();
+  src.buffer = buffer;
+  src.connect(ac.destination);
+  src.start(0);
+}
+
 function startScore(ac: AudioContext): void {
   const master = ac.createGain();
-  master.gain.value = 0.0001;
-  master.gain.exponentialRampToValueAtTime(0.22, ac.currentTime + 6);
+  master.gain.value = 0.35;
   master.connect(ac.destination);
 
   const delay = ac.createDelay(2);
-  delay.delayTime.value = 0.84;
+  delay.delayTime.value = 0.62;
   const feedback = ac.createGain();
-  feedback.gain.value = 0.44;
+  feedback.gain.value = 0.36;
   const wet = ac.createGain();
-  wet.gain.value = 0.5;
+  wet.gain.value = 0.55;
   delay.connect(feedback);
   feedback.connect(delay);
   delay.connect(wet);
   wet.connect(master);
 
   const dry = ac.createGain();
-  dry.gain.value = 0.62;
+  dry.gain.value = 0.85;
   dry.connect(master);
 
-  drone(ac, dry, delay, 36.71, 0.05, 0);
-  drone(ac, dry, delay, 73.42, 0.04, 6);
-  drone(ac, dry, delay, 69.3, 0.018, -9);
-  drone(ac, dry, delay, 110, 0.02, 3);
-  drone(ac, dry, delay, 174.61, 0.01, 0);
+  drone(ac, dry, delay, 146.83, 0.11, 0);
+  drone(ac, dry, delay, 174.61, 0.08, 5);
+  drone(ac, dry, delay, 220.0, 0.07, -4);
+  drone(ac, dry, delay, 293.66, 0.045, 2);
   hush(ac, dry);
+  glass(ac, dry, delay, 220);
+  glass(ac, dry, delay, 146.83);
 
   const next = () => {
-    const freq = GLASS[Math.floor(Math.random() * GLASS.length)] ?? 146.83;
+    const freq = GLASS[Math.floor(Math.random() * GLASS.length)] ?? 220;
     glass(ac, dry, delay, freq);
-    if (Math.random() < 0.35) {
-      glass(ac, dry, delay, freq * 0.5);
-    }
-    window.setTimeout(next, 5200 + Math.random() * 9000);
+    if (Math.random() < 0.4) glass(ac, dry, delay, freq * 1.5);
+    window.setTimeout(next, 3800 + Math.random() * 5200);
   };
-  window.setTimeout(next, 2400);
+  window.setTimeout(next, 1800);
 }
 
 function drone(
@@ -110,23 +117,21 @@ function drone(
   cents: number,
 ): void {
   const osc = ac.createOscillator();
-  osc.type = "sine";
+  osc.type = "triangle";
   osc.frequency.value = freq;
   osc.detune.value = cents;
+  const filter = ac.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = 900;
   const g = ac.createGain();
-  const lfo = ac.createOscillator();
-  const lfoGain = ac.createGain();
-  lfo.type = "sine";
-  lfo.frequency.value = 0.04 + Math.random() * 0.03;
-  lfoGain.gain.value = level * 0.35;
-  g.gain.value = level * 0.7;
-  lfo.connect(lfoGain);
-  lfoGain.connect(g.gain);
-  osc.connect(g);
+  const now = ac.currentTime;
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.linearRampToValueAtTime(level, now + 1.4);
+  osc.connect(filter);
+  filter.connect(g);
   g.connect(dry);
   g.connect(delay);
   osc.start();
-  lfo.start();
 }
 
 function glass(ac: AudioContext, dry: AudioNode, delay: AudioNode, freq: number): void {
@@ -136,13 +141,13 @@ function glass(ac: AudioContext, dry: AudioNode, delay: AudioNode, freq: number)
   const g = ac.createGain();
   const now = ac.currentTime;
   g.gain.setValueAtTime(0.0001, now);
-  g.gain.exponentialRampToValueAtTime(0.055, now + 2.2);
-  g.gain.exponentialRampToValueAtTime(0.0001, now + 11);
+  g.gain.linearRampToValueAtTime(0.16, now + 0.35);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 7.5);
   osc.connect(g);
   g.connect(dry);
   g.connect(delay);
   osc.start(now);
-  osc.stop(now + 11.2);
+  osc.stop(now + 7.8);
 }
 
 function hush(ac: AudioContext, dest: AudioNode): void {
@@ -154,9 +159,9 @@ function hush(ac: AudioContext, dest: AudioNode): void {
   src.loop = true;
   const filter = ac.createBiquadFilter();
   filter.type = "lowpass";
-  filter.frequency.value = 160;
+  filter.frequency.value = 480;
   const g = ac.createGain();
-  g.gain.value = 0.016;
+  g.gain.value = 0.03;
   src.connect(filter);
   filter.connect(g);
   g.connect(dest);
