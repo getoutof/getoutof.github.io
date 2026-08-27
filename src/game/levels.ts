@@ -24,12 +24,37 @@ export type SkyDef = {
   planet?: SkyPlanet;
 };
 
+/**
+ * Beacon motion the Designer can attach to a target.
+ *
+ * `{x,y}` on the target is always the rest pose:
+ *   - static: the beacon sits there
+ *   - orbit: the circle's center
+ *   - line: one end of the patrol
+ *
+ * - `orbit`: around rest pose, `radius` world units, `period` seconds per revolution.
+ *   Optional `phase` is turns in 0–1 (default 0). At phase 0 the beacon starts at rest +x.
+ * - `line`: patrol rest pose ↔ `to`. `period` is seconds per round trip (out and back).
+ *   Optional `phase` is 0–1 along that trip (default 0 = at rest).
+ *
+ * Examples:
+ *   { x: 200, y: 240 }
+ *   { x: 180, y: 200, motion: { kind: "orbit", radius: 40, period: 3 } }
+ *   { x: 80, y: 300, motion: { kind: "line", to: { x: 280, y: 300 }, period: 4, phase: 0.25 } }
+ */
+export type TargetMotion =
+  | { kind: "orbit"; radius: number; period: number; phase?: number }
+  | { kind: "line"; to: Vec; period: number; phase?: number };
+
+/** A beacon. Plain `{x,y}` / `beaconOn(...)` stays static. Add `motion` for orbit or line. */
+export type TargetDef = Vec & { motion?: TargetMotion };
+
 export type LevelDef = {
   name: string;
   wind: Vec;
   ball: Vec;
   platforms: Rect[];
-  targets: Vec[];
+  targets: TargetDef[];
   sky: SkyDef;
 };
 
@@ -156,6 +181,34 @@ export const LEVELS: LevelDef[] = [
   },
 ];
 
-export function targetCircles(level: LevelDef) {
-  return level.targets.map((t) => ({ ...t, r: TARGET_RADIUS }));
+function pingPong(tau: number): number {
+  const u = tau - Math.floor(tau);
+  return u < 0.5 ? u * 2 : 2 - u * 2;
+}
+
+/** Live beacon position at sim time (seconds). Pause freezes this because `state.time` does not advance. */
+export function targetPos(target: TargetDef, time: number): Vec {
+  const motion = target.motion;
+  if (!motion) return { x: target.x, y: target.y };
+  const phase = motion.phase ?? 0;
+  const tau = motion.period > 0 ? time / motion.period + phase : phase;
+  if (motion.kind === "orbit") {
+    const a = tau * Math.PI * 2;
+    return {
+      x: target.x + motion.radius * Math.cos(a),
+      y: target.y + motion.radius * Math.sin(a),
+    };
+  }
+  const t = pingPong(tau);
+  return {
+    x: target.x + (motion.to.x - target.x) * t,
+    y: target.y + (motion.to.y - target.y) * t,
+  };
+}
+
+export function targetCircles(level: LevelDef, time = 0) {
+  return level.targets.map((t) => {
+    const p = targetPos(t, time);
+    return { x: p.x, y: p.y, r: TARGET_RADIUS };
+  });
 }
