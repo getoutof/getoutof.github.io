@@ -302,7 +302,7 @@ export function nextLevel(state: GameState): GameState {
 }
 
 export function remainingTargets(state: GameState): Circle[] {
-  return targetCircles(currentLevel(state)).filter((_, i) => !state.collected[i]);
+  return targetCircles(currentLevel(state), state.time).filter((_, i) => !state.collected[i]);
 }
 
 function idleBob(ball: Ball, time: number): void {
@@ -310,7 +310,7 @@ function idleBob(ball: Ball, time: number): void {
 }
 
 function collectTargets(state: GameState, sfx: SfxHooks): void {
-  const circles = targetCircles(currentLevel(state));
+  const circles = targetCircles(currentLevel(state), state.time);
   circles.forEach((circle, index) => {
     if (state.collected[index]) return;
     if (hitsCircle(state.world.ball, circle)) {

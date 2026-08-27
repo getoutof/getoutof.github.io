@@ -1,6 +1,6 @@
-import { attemptsFraction, controlPad, createGame, flightRush, heatAmount, layoutCamera, nextLevel, pointerUp, predictPath, remainingShots, resetLevel, tick } from "./game.ts";
+import { attemptsFraction, controlPad, createGame, flightRush, heatAmount, layoutCamera, nextLevel, pointerUp, predictPath, remainingShots, remainingTargets, resetLevel, tick } from "./game.ts";
 import { aimFromStick, knobFromPointer, STICK_KNOB_R } from "./input.ts";
-import { GROUND_TOP, LEVELS } from "./levels.ts";
+import { GROUND_TOP, LEVELS, targetPos, type LevelDef } from "./levels.ts";
 import { MAX_PULL, MAX_SHOTS, BALL_RADIUS, TARGET_RADIUS, WORLD } from "./math.ts";
 import { createBall, hitsCircle, isSupported, stepWorld } from "./physics.ts";
 import { rememberStars, starsFromShots } from "./progress.ts";
@@ -67,7 +67,7 @@ if (!lastFlight.message.includes("0 из 3")) {
 const paused = resetLevel(0);
 paused.phase = "flying";
 paused.paused = true;
-paused.world.ball.pos = { x: LEVELS[0].targets[0].x, y: LEVELS[0].targets[0].y };
+paused.world.ball.pos = { ...targetPos(LEVELS[0].targets[0], paused.time) };
 paused.world.ball.vel = { x: 420, y: -180 };
 const frozen = { x: paused.world.ball.pos.x, y: paused.world.ball.pos.y, t: paused.time };
 tick(paused, 1 / 60, silent);
@@ -207,7 +207,7 @@ if (!LEVELS[5].sky.planet || LEVELS[5].sky.planet.x < WORLD.w / 2) throw new Err
 
 const grab = resetLevel(0);
 grab.phase = "flying";
-grab.world.ball.pos = { x: LEVELS[0].targets[0].x, y: LEVELS[0].targets[0].y };
+grab.world.ball.pos = { ...targetPos(LEVELS[0].targets[0], grab.time) };
 grab.world.ball.vel = { x: 0, y: 0 };
 tick(grab, 1 / 60, silent);
 if (!grab.collected[0]) throw new Error("touching the beacon should collect it");
@@ -216,6 +216,91 @@ if (!grab.particles.some((p) => p.kind === "ring" && p.color === "#F2B62A")) {
 }
 if (grab.particles.filter((p) => p.kind !== "ring").length < 8) {
   throw new Error("collect should keep burst particles");
+}
+
+const frozenTargets = [
+  [{ x: 292, y: GROUND_TOP - 32 }],
+  [
+    { x: 188, y: GROUND_TOP - 32 },
+    { x: 308, y: GROUND_TOP - 32 },
+  ],
+  [{ x: 300, y: 370 - 32 }],
+  [{ x: 224, y: 238 }],
+  [{ x: 258, y: 238 }],
+  [
+    { x: 168, y: 278 },
+    { x: 292, y: 158 },
+    { x: 292, y: GROUND_TOP - 32 },
+  ],
+] as const;
+
+LEVELS.forEach((level, i) => {
+  level.targets.forEach((t, j) => {
+    if (t.motion) throw new Error(`pack level ${i} target ${j} must stay static`);
+  });
+  const got = JSON.stringify(level.targets.map((t) => ({ x: t.x, y: t.y })));
+  const want = JSON.stringify(frozenTargets[i]);
+  if (got !== want) throw new Error(`level ${i} target layout changed: ${got}`);
+});
+
+const orbitBeacon = { x: 180, y: 200, motion: { kind: "orbit" as const, radius: 50, period: 2 } };
+const orbitRest = targetPos(orbitBeacon, 0);
+if (Math.abs(orbitRest.x - 230) > 1e-9 || Math.abs(orbitRest.y - 200) > 1e-9) {
+  throw new Error(`orbit at t=0 should sit at rest +x, got ${JSON.stringify(orbitRest)}`);
+}
+const orbitQuarter = targetPos(orbitBeacon, 0.5);
+if (Math.abs(orbitQuarter.x - 180) > 1e-9 || Math.abs(orbitQuarter.y - 250) > 1e-9) {
+  throw new Error(`orbit should translate to +y at T/4, got ${JSON.stringify(orbitQuarter)}`);
+}
+
+const lineBeacon = { x: 80, y: 300, motion: { kind: "line" as const, to: { x: 280, y: 300 }, period: 4 } };
+const lineMid = targetPos(lineBeacon, 2);
+if (Math.abs(lineMid.x - 280) > 1e-9 || Math.abs(lineMid.y - 300) > 1e-9) {
+  throw new Error(`line patrol should reach 'to' at period/2, got ${JSON.stringify(lineMid)}`);
+}
+const lineBack = targetPos(lineBeacon, 4);
+if (Math.abs(lineBack.x - 80) > 1e-9 || Math.abs(lineBack.y - 300) > 1e-9) {
+  throw new Error(`line patrol should return to rest at period, got ${JSON.stringify(lineBack)}`);
+}
+
+const motionLevel: LevelDef = {
+  name: "motion-sanity",
+  wind: { x: 0, y: 0 },
+  ball: LEVELS[0].ball,
+  platforms: LEVELS[0].platforms,
+  targets: [orbitBeacon],
+  sky: LEVELS[0].sky,
+};
+LEVELS.push(motionLevel);
+try {
+  const hit = resetLevel(LEVELS.length - 1);
+  hit.phase = "flying";
+  const dt = 1 / 60;
+  hit.time = 0.5 - dt;
+  const live = targetPos(orbitBeacon, 0.5);
+  hit.world.ball.pos = { x: live.x, y: live.y };
+  hit.world.ball.vel = { x: 0, y: 0 };
+  tick(hit, dt, silent);
+  if (!hit.collected[0]) throw new Error("collect must use the moving beacon position");
+
+  const miss = resetLevel(LEVELS.length - 1);
+  miss.phase = "flying";
+  miss.time = 0.5 - dt;
+  miss.world.ball.pos = { x: orbitBeacon.x, y: orbitBeacon.y };
+  miss.world.ball.vel = { x: 0, y: 0 };
+  tick(miss, dt, silent);
+  if (miss.collected[0]) throw new Error("collect must not hit the orbit rest pose while the beacon is away");
+
+  const frozenMotion = resetLevel(LEVELS.length - 1);
+  frozenMotion.paused = true;
+  const before = remainingTargets(frozenMotion)[0];
+  tick(frozenMotion, 1, silent);
+  const after = remainingTargets(frozenMotion)[0];
+  if (before.x !== after.x || before.y !== after.y) {
+    throw new Error("pause must freeze beacon motion");
+  }
+} finally {
+  LEVELS.pop();
 }
 
 console.log("ok", { phase: g.phase, shots: g.shots, collected: g.collected, ball: g.world.ball.pos });
