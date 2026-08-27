@@ -179,6 +179,105 @@ export const LEVELS: LevelDef[] = [
       planet: { x: 312, y: 70, r: 16, lit: "left" },
     },
   },
+  {
+    name: "Карусель",
+    wind: { x: 0, y: 0 },
+    ball: ballOn(58),
+    platforms: [floor(0, WORLD.w)],
+    targets: [{ x: 210, y: 250, motion: { kind: "orbit", radius: 48, period: 3.5 } }],
+    sky: {
+      top: "#071018",
+      bottom: "#0e1c2c",
+      stars: 88,
+      nebulae: [
+        { x: 210, y: 240, r: 160, color: "#3d8cb8", alpha: 0.14 },
+        { x: 80, y: 120, r: 100, color: "#5ec8e0", alpha: 0.08 },
+      ],
+      planet: { x: 42, y: 78, r: 18, lit: "right" },
+    },
+  },
+  {
+    name: "Маятник",
+    wind: { x: 0, y: 0 },
+    ball: ballOn(52),
+    platforms: [floor(0, WORLD.w), { x: 88, y: 278, w: 184, h: 16 }],
+    targets: [{ x: 96, y: 236, motion: { kind: "line", to: { x: 264, y: 220 }, period: 4 } }],
+    sky: {
+      top: "#080c16",
+      bottom: "#12182a",
+      stars: 74,
+      nebulae: [
+        { x: 180, y: 160, r: 200, color: "#2a5088", alpha: 0.12 },
+        { x: 300, y: 300, r: 90, color: "#1e3a68", alpha: 0.1 },
+      ],
+    },
+  },
+  {
+    name: "Три берега",
+    wind: { x: 0, y: 0 },
+    ball: ballOn(36),
+    platforms: [floor(0, 70), floor(155, 50), floor(300, 60)],
+    targets: [beaconOn(330)],
+    sky: {
+      top: "#05060c",
+      bottom: "#0a0c16",
+      stars: 44,
+      nebulae: [{ x: 180, y: 360, r: 140, color: "#1a2848", alpha: 0.12 }],
+    },
+  },
+  {
+    name: "Восходящий",
+    wind: { x: 0, y: -70 },
+    ball: ballOn(54),
+    platforms: [floor(0, WORLD.w), { x: 248, y: 108, w: 96, h: 16 }],
+    targets: [beaconOn(298, 108)],
+    sky: {
+      top: "#05141c",
+      bottom: "#0a2030",
+      stars: 100,
+      nebulae: [
+        { x: 180, y: 80, r: 180, color: "#4ec8dc", alpha: 0.14 },
+        { x: 90, y: 220, r: 120, color: "#7df0ff", alpha: 0.07 },
+      ],
+      planet: { x: 48, y: 64, r: 18, lit: "right" },
+    },
+  },
+  {
+    name: "Две орбиты",
+    wind: { x: 40, y: 0 },
+    ball: ballOn(50),
+    platforms: [floor(0, WORLD.w), { x: 230, y: 310, w: 110, h: 16 }],
+    targets: [
+      { x: 150, y: 250, motion: { kind: "orbit", radius: 44, period: 3.1 } },
+      { x: 268, y: 155, motion: { kind: "orbit", radius: 32, period: 4.8, phase: 0.42 } },
+    ],
+    sky: {
+      top: "#070e18",
+      bottom: "#101a28",
+      stars: 92,
+      nebulae: [
+        { x: 100, y: 180, r: 130, color: "#3d6cb0", alpha: 0.13 },
+        { x: 260, y: 120, r: 120, color: "#5aa0c8", alpha: 0.11 },
+      ],
+    },
+  },
+  {
+    name: "Последний круг",
+    wind: { x: 44, y: -66 },
+    ball: ballOn(46, 395),
+    platforms: [floor(0, 100, 395), floor(252, 108, 395)],
+    targets: [{ x: 298, y: 308, motion: { kind: "orbit", radius: 42, period: 3.4, phase: 0.12 } }],
+    sky: {
+      top: "#100c14",
+      bottom: "#1a1418",
+      stars: 84,
+      nebulae: [
+        { x: 160, y: 200, r: 200, color: "#c47a3a", alpha: 0.15 },
+        { x: 300, y: 90, r: 100, color: "#e09050", alpha: 0.09 },
+      ],
+      planet: { x: 40, y: 78, r: 22, lit: "right" },
+    },
+  },
 ];
 
 function pingPong(tau: number): number {

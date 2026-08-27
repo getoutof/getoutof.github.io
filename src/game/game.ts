@@ -295,10 +295,13 @@ export function tick(state: GameState, dt: number, sfx: SfxHooks): void {
   }
 }
 
+export function isLastLevel(index: number): boolean {
+  return index >= LEVELS.length - 1;
+}
+
 export function nextLevel(state: GameState): GameState {
-  const next = state.levelIndex + 1;
-  if (next >= LEVELS.length) return resetLevel(0);
-  return resetLevel(next);
+  if (isLastLevel(state.levelIndex)) return resetLevel(state.levelIndex);
+  return resetLevel(state.levelIndex + 1);
 }
 
 export function remainingTargets(state: GameState): Circle[] {
