@@ -144,7 +144,10 @@ body {
   inset: 0;
   z-index: 3;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: calc(12vh + env(safe-area-inset-top, 0px)) 20px calc(28px + env(safe-area-inset-bottom, 0px));
   background:
     linear-gradient(180deg, rgb(7 8 15 / 0.102), rgb(7 8 15 / 0.6) 38%, rgb(7 8 15 / 0.878));
@@ -160,7 +163,7 @@ body {
   width: min(420px, 100%);
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  flex: 1 0 auto;
 }
 
 .eyebrow {
@@ -172,9 +175,9 @@ body {
 }
 
 h1 {
-  margin: 0 0 12px;
-  font-size: clamp(42px, 12vw, 64px);
-  line-height: 0.9;
+  margin: 0 0 10px;
+  font-size: clamp(32px, 8vw, 44px);
+  line-height: 0.95;
   letter-spacing: -0.04em;
 }
 
@@ -227,12 +230,9 @@ h1 {
 
 .levels {
   list-style: none;
-  margin: 18px 0 12px;
+  margin: 14px 0 12px;
   padding: 0;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  flex: 0 0 auto;
 }
 
 .level-btn {

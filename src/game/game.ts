@@ -37,6 +37,7 @@ export type GameState = {
   banner: string | null;
   bannerUntil: number;
   rumbleAfter: number;
+  paused: boolean;
 };
 
 type SfxHooks = {
@@ -86,6 +87,7 @@ export function resetLevel(index: number, phase: Phase = "aiming"): GameState {
     banner: phase === "aiming" ? level.name : null,
     bannerUntil: phase === "aiming" ? 2.6 : 0,
     rumbleAfter: 0,
+    paused: false,
   };
 }
 
@@ -135,7 +137,7 @@ export function pointerDownStick(
   clientX: number,
   clientY: number,
 ): void {
-  if (state.phase !== "aiming") return;
+  if (state.paused || state.phase !== "aiming") return;
   const pad = controlPad(view, camera, safeBottom);
   const pointer = clientOnCanvas(clientX, clientY, canvas);
   if (!inControlZone(pad, pointer, camera.scale)) return;
@@ -155,7 +157,7 @@ export function pointerMoveStick(
   clientX: number,
   clientY: number,
 ): void {
-  if (state.phase !== "aiming" || !state.aim) return;
+  if (state.paused || state.phase !== "aiming" || !state.aim) return;
   const pad = controlPad(view, camera, safeBottom);
   const pointer = clientOnCanvas(clientX, clientY, canvas);
   state.aim = {
@@ -166,7 +168,7 @@ export function pointerMoveStick(
 }
 
 export function pointerUp(state: GameState, onLaunch: (power: number) => void): void {
-  if (state.phase !== "aiming" || !state.aim) return;
+  if (state.paused || state.phase !== "aiming" || !state.aim) return;
   const power = Math.hypot(state.aim.pull.x, state.aim.pull.y);
   if (power < 12) {
     state.aim = null;
@@ -199,7 +201,13 @@ export function heatAmount(state: GameState): number {
 }
 
 export function remainingShots(state: GameState): number {
-  return Math.max(0, MAX_SHOTS - state.shots);
+  const spent = state.shots;
+  const inFlight = state.phase === "flying" || state.phase === "settle";
+  return Math.max(0, MAX_SHOTS - spent + (inFlight ? 1 : 0));
+}
+
+export function attemptsFraction(state: GameState): string {
+  return `${remainingShots(state)} из ${MAX_SHOTS}`;
 }
 
 function attemptsWord(n: number): string {
@@ -209,6 +217,7 @@ function attemptsWord(n: number): string {
 }
 
 export function tick(state: GameState, dt: number, sfx: SfxHooks): void {
+  if (state.paused) return;
   state.time += dt;
   state.shake = Math.max(0, state.shake - dt * 18);
   if (state.phase === "aiming" && state.aim) {
@@ -256,7 +265,7 @@ export function tick(state: GameState, dt: number, sfx: SfxHooks): void {
     if (outOfWorld(state.world.ball)) {
       if (state.shots >= MAX_SHOTS) {
         state.phase = "fail";
-        state.message = "Шар укатился. Попытки закончились — 3 из 3";
+        state.message = `Шар укатился. Попытки закончились — ${attemptsFraction(state)}`;
         sfx.fail();
         return;
       }
@@ -275,7 +284,7 @@ export function tick(state: GameState, dt: number, sfx: SfxHooks): void {
     if (settleTimer >= SETTLE_TIME) {
       if (state.shots >= MAX_SHOTS && !allCollected(state)) {
         state.phase = "fail";
-        state.message = "Попытки закончились — 3 из 3. Маяки не собраны";
+        state.message = `Попытки закончились — ${attemptsFraction(state)}. Маяки не собраны`;
         sfx.fail();
         return;
       }

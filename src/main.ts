@@ -6,14 +6,13 @@ import {
   layoutCamera,
   LEVELS,
   MAX_PULL,
-  MAX_SHOTS,
   nextLevel,
   pointerDownStick,
   pointerMoveStick,
   pointerUp,
-  remainingShots,
   resetLevel,
   tick,
+  attemptsFraction,
   type Camera,
   type GameState,
 } from "./game/game.ts";
@@ -117,6 +116,8 @@ function showTitle(): void {
 
 function showLevels(): void {
   overlayMode = "levels";
+  state.paused = true;
+  state.aim = null;
   overlay.hidden = false;
   overlay.innerHTML = `
     <div class="panel">
@@ -145,6 +146,7 @@ function onPlay(): void {
     overlayMode = "hidden";
     overlay.hidden = true;
     hud.hidden = false;
+    state.paused = false;
     syncHud();
     return;
   }
@@ -162,9 +164,8 @@ function onPlay(): void {
 }
 
 function syncHud(): void {
-  const left = remainingShots(state);
   levelLabel.textContent = `Уровень ${state.levelIndex + 1}`;
-  shotLabel.textContent = `Попытки ${left} из ${MAX_SHOTS}`;
+  shotLabel.textContent = `Попытки ${attemptsFraction(state)}`;
   if (state.notice && overlay.hidden) {
     toast.hidden = false;
     toast.textContent = state.notice;
@@ -242,7 +243,7 @@ function frame(now: number): void {
   const prev = state.phase;
   tick(state, dt, sfx);
   camera = draw(ctx, state, view, safeAreaBottom());
-  if (state.phase !== prev) {
+  if (state.phase !== prev && overlayMode === "hidden") {
     if (state.phase === "win") {
       haptic("heavy");
       const earned = starsFromShots(state.shots);

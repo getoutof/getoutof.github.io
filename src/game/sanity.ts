@@ -1,4 +1,4 @@
-import { controlPad, createGame, flightRush, heatAmount, layoutCamera, nextLevel, pointerUp, predictPath, remainingShots, resetLevel, tick } from "./game.ts";
+import { attemptsFraction, controlPad, createGame, flightRush, heatAmount, layoutCamera, nextLevel, pointerUp, predictPath, remainingShots, resetLevel, tick } from "./game.ts";
 import { aimFromStick, knobFromPointer, STICK_KNOB_R } from "./input.ts";
 import { GROUND_TOP, LEVELS } from "./levels.ts";
 import { MAX_PULL, MAX_SHOTS, BALL_RADIUS, TARGET_RADIUS, WORLD } from "./math.ts";
@@ -26,6 +26,9 @@ const path = predictPath(g, g.aim.pull);
 if (path.length < 5) throw new Error("path too short");
 pointerUp(g, () => {});
 if (String(g.phase) !== "flying") throw new Error(`expected flying, got ${g.phase}`);
+if (remainingShots(g) !== MAX_SHOTS) {
+  throw new Error(`in-flight first shot should still show ${MAX_SHOTS} remaining, got ${remainingShots(g)}`);
+}
 for (let i = 0; i < 240; i += 1) tick(g, 1 / 60, silent);
 if (g.phase === "aiming" && !isSupported(g.world.ball, g.world.platforms)) {
   throw new Error(`settled in mid-air at ${JSON.stringify(g.world.ball.pos)}`);
@@ -38,6 +41,55 @@ tick(g, 1 / 60, silent);
 if (String(g.phase) !== "aiming") throw new Error(`expected respawn aiming, got ${g.phase}`);
 if (!g.notice?.includes("укатился")) throw new Error(`expected roll-away notice, got ${g.notice}`);
 if (remainingShots(g) !== 1) throw new Error(`expected 1 attempt left, got ${remainingShots(g)}`);
+
+const lastFlight = resetLevel(0);
+lastFlight.shots = MAX_SHOTS;
+lastFlight.phase = "flying";
+if (remainingShots(lastFlight) !== 1) {
+  throw new Error(`last in-flight shot must still count as 1 attempt, got ${remainingShots(lastFlight)}`);
+}
+if (attemptsFraction(lastFlight) !== "1 из 3") {
+  throw new Error(`HUD/fail copy must share remaining attempts, got ${attemptsFraction(lastFlight)}`);
+}
+lastFlight.phase = "settle";
+if (remainingShots(lastFlight) !== 1) {
+  throw new Error(`last settling shot must still count as 1 attempt, got ${remainingShots(lastFlight)}`);
+}
+lastFlight.phase = "flying";
+lastFlight.world.ball.pos = { x: -120, y: 800 };
+tick(lastFlight, 1 / 60, silent);
+if (String(lastFlight.phase) !== "fail") throw new Error(`expected fail after last roll-away, got ${lastFlight.phase}`);
+if (remainingShots(lastFlight) !== 0) throw new Error(`fail should show 0 remaining, got ${remainingShots(lastFlight)}`);
+if (!lastFlight.message.includes("0 из 3")) {
+  throw new Error(`fail copy should match HUD remaining, got ${lastFlight.message}`);
+}
+
+const paused = resetLevel(0);
+paused.phase = "flying";
+paused.paused = true;
+paused.world.ball.pos = { x: LEVELS[0].targets[0].x, y: LEVELS[0].targets[0].y };
+paused.world.ball.vel = { x: 420, y: -180 };
+const frozen = { x: paused.world.ball.pos.x, y: paused.world.ball.pos.y, t: paused.time };
+tick(paused, 1 / 60, silent);
+if (String(paused.phase) !== "flying") throw new Error(`levels overlay must not resolve the shot, got ${paused.phase}`);
+if (paused.collected[0]) throw new Error("levels overlay must not collect beacons");
+if (paused.world.ball.pos.x !== frozen.x || paused.world.ball.pos.y !== frozen.y) {
+  throw new Error("levels overlay must freeze physics");
+}
+if (paused.time !== frozen.t) throw new Error("levels overlay must freeze sim time");
+paused.paused = false;
+tick(paused, 1 / 60, silent);
+if (paused.world.ball.pos.x === frozen.x && paused.world.ball.pos.y === frozen.y) {
+  throw new Error("unpausing should resume the in-flight shot");
+}
+
+const noLaunch = resetLevel(0);
+noLaunch.aim = { origin: noLaunch.world.ball.pos, pull: { x: 40, y: -90 }, pointer: { x: 180, y: 400 } };
+noLaunch.paused = true;
+pointerUp(noLaunch, () => {
+  throw new Error("paused overlay must not launch");
+});
+if (String(noLaunch.phase) !== "aiming") throw new Error("paused overlay must keep the aimed shot");
 
 g.phase = "win";
 g.shots = 2;
