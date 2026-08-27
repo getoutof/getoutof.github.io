@@ -78,6 +78,10 @@ function levelListMarkup(): string {
 
 function bindOverlay(): void {
   overlay.querySelector("#play")?.addEventListener("click", onPlay);
+  overlay.querySelector("[data-back]")?.addEventListener("click", () => {
+    hideGameplayOverlay();
+    syncHud();
+  });
   overlay.querySelectorAll<HTMLButtonElement>("[data-level]").forEach((btn) => {
     btn.addEventListener("click", () => startLevel(Number(btn.dataset.level)));
   });
@@ -125,34 +129,34 @@ function showLevels(): void {
       <h1>Уровни</h1>
       <p class="lead">Лучший результат по звёздам.</p>
       ${levelListMarkup()}
-      <button id="play" type="button" class="primary">Назад</button>
+      <button type="button" class="primary" data-back>Назад</button>
     </div>
   `;
   bindOverlay();
 }
 
-function startLevel(index: number): void {
-  void sfx.resume();
-  state = resetLevel(index);
+function hideGameplayOverlay(): void {
   overlayMode = "hidden";
   overlay.hidden = true;
   hud.hidden = false;
+  state.paused = false;
+}
+
+function startLevel(index: number): void {
+  void sfx.resume();
+  state = resetLevel(index);
+  hideGameplayOverlay();
   syncHud();
 }
 
 function onPlay(): void {
   void sfx.resume();
   if (overlayMode === "levels") {
-    overlayMode = "hidden";
-    overlay.hidden = true;
-    hud.hidden = false;
-    state.paused = false;
+    hideGameplayOverlay();
     syncHud();
     return;
   }
-  overlay.hidden = true;
-  hud.hidden = false;
-  overlayMode = "hidden";
+  hideGameplayOverlay();
   if (state.phase === "win") {
     state = nextLevel(state);
   } else if (state.phase === "fail") {
@@ -212,8 +216,7 @@ canvas.addEventListener("pointercancel", () => {
 
 restart.addEventListener("click", () => {
   state = resetLevel(state.levelIndex);
-  overlayMode = "hidden";
-  overlay.hidden = true;
+  hideGameplayOverlay();
   syncHud();
 });
 
@@ -230,9 +233,7 @@ window.addEventListener("resize", () => {
 window.addEventListener("keydown", (event) => {
   if (event.key === "r" || event.key === "R") {
     state = resetLevel(state.levelIndex);
-    overlayMode = "hidden";
-    overlay.hidden = true;
-    hud.hidden = false;
+    hideGameplayOverlay();
     syncHud();
   }
 });
@@ -240,6 +241,7 @@ window.addEventListener("keydown", (event) => {
 function frame(now: number): void {
   const dt = Math.min(0.033, (now - last) / 1000);
   last = now;
+  state.paused = overlayMode === "levels";
   const prev = state.phase;
   tick(state, dt, sfx);
   camera = draw(ctx, state, view, safeAreaBottom());
