@@ -1,13 +1,17 @@
 import { controlPad, currentLevel, flightRush, heatAmount, layoutCamera, predictPath, remainingTargets, type Camera, type GameState } from "./game.ts";
 import { knobFromPointer, STICK_KNOB_R, stickWellRadius } from "./input.ts";
-import { BALL_RADIUS, WORLD } from "./math.ts";
+import type { SkyDef, SkyNebula, SkyPlanet } from "./levels.ts";
+import { BALL_RADIUS, TARGET_RADIUS, WORLD } from "./math.ts";
 
 const BG = "#07080f";
 const BALL = "#e8fbff";
 const ACCENT = "#7df0ff";
 const GOLD = "#F2B62A";
-const PLATFORM = "#1a2233";
-const PLATFORM_TOP = "#2b3750";
+const CORE_HI = "#FFD678";
+const SPECULAR = "#FFF6D8";
+const PLATFORM_TOP = "#304056";
+const PLATFORM_SPEC = "rgba(125, 240, 255, 0.22)";
+const RIM_H = 6;
 
 type Rgb = { r: number; g: number; b: number };
 
@@ -33,12 +37,28 @@ export function heatColor(t: number, alpha = 1): string {
   return rgbCss(c, alpha);
 }
 
-const stars = Array.from({ length: 70 }, (_, i) => ({
-  x: (i * 97 + 13) % WORLD.w,
-  y: (i * 53 + 29) % WORLD.h,
-  r: 0.4 + (i % 4) * 0.35,
-  a: 0.25 + (i % 5) * 0.1,
-}));
+type Star = { x: number; y: number; r: number; a: number };
+
+const starCache = new Map<number, Star[]>();
+
+function starsFor(count: number): Star[] {
+  let list = starCache.get(count);
+  if (!list) {
+    list = Array.from({ length: count }, (_, i) => ({
+      x: (i * 97 + 13) % WORLD.w,
+      y: (i * 53 + 29) % WORLD.h,
+      r: 0.4 + (i % 4) * 0.35,
+      a: 0.22 + (i % 5) * 0.1,
+    }));
+    starCache.set(count, list);
+  }
+  return list;
+}
+
+function hexRgb(hex: string): Rgb {
+  const n = Number.parseInt(hex.replace("#", ""), 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
 
 export function resizeCanvas(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): { w: number; h: number } {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -71,7 +91,7 @@ export function draw(
   );
   ctx.scale(camera.scale, camera.scale);
 
-  drawBackdrop(ctx, state.time);
+  drawBackdrop(ctx, currentLevel(state).sky, state.time);
   drawWind(ctx, state);
   drawPlatforms(ctx, state);
   drawTargets(ctx, state);
@@ -88,14 +108,15 @@ export function draw(
   return camera;
 }
 
-function drawBackdrop(ctx: CanvasRenderingContext2D, time: number): void {
+function drawBackdrop(ctx: CanvasRenderingContext2D, sky: SkyDef, time: number): void {
   const g = ctx.createLinearGradient(0, 0, 0, WORLD.h);
-  g.addColorStop(0, "#0c1224");
-  g.addColorStop(1, "#07080f");
+  g.addColorStop(0, sky.top);
+  g.addColorStop(1, sky.bottom);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, WORLD.w, WORLD.h);
 
-  for (const star of stars) {
+  for (const blob of sky.nebulae) drawNebula(ctx, blob);
+  for (const star of starsFor(sky.stars)) {
     ctx.globalAlpha = star.a + Math.sin(time * 1.4 + star.x) * 0.08;
     ctx.fillStyle = "#d7e4ff";
     ctx.beginPath();
@@ -103,6 +124,56 @@ function drawBackdrop(ctx: CanvasRenderingContext2D, time: number): void {
     ctx.fill();
   }
   ctx.globalAlpha = 1;
+  if (sky.planet) drawPlanet(ctx, sky.planet);
+}
+
+function drawNebula(ctx: CanvasRenderingContext2D, blob: SkyNebula): void {
+  const rgb = hexRgb(blob.color);
+  const g = ctx.createRadialGradient(blob.x, blob.y, blob.r * 0.08, blob.x, blob.y, blob.r);
+  g.addColorStop(0, rgbCss(rgb, blob.alpha));
+  g.addColorStop(0.55, rgbCss(rgb, blob.alpha * 0.45));
+  g.addColorStop(1, rgbCss(rgb, 0));
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(blob.x, blob.y, blob.r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawPlanet(ctx: CanvasRenderingContext2D, planet: SkyPlanet): void {
+  const { x, y, r } = planet;
+  const litRight = planet.lit !== "left";
+  const lightX = litRight ? x + r * 0.32 : x - r * 0.32;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.clip();
+
+  const body = ctx.createRadialGradient(lightX, y - r * 0.18, r * 0.15, x, y, r);
+  body.addColorStop(0, "#252d3c");
+  body.addColorStop(0.45, "#141a26");
+  body.addColorStop(1, "#07090e");
+  ctx.fillStyle = body;
+  ctx.fillRect(x - r, y - r, r * 2, r * 2);
+
+  const shade = ctx.createLinearGradient(litRight ? x - r : x + r, y, litRight ? x + r : x - r, y);
+  shade.addColorStop(0, "rgba(0,0,0,0.62)");
+  shade.addColorStop(0.48, "rgba(0,0,0,0.18)");
+  shade.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = shade;
+  ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  ctx.restore();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.strokeStyle = "rgba(170, 186, 210, 0.28)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(x, y, r - 0.7, litRight ? -Math.PI * 0.42 : Math.PI * 0.58, litRight ? Math.PI * 0.42 : Math.PI * 1.42);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawWind(ctx: CanvasRenderingContext2D, state: GameState): void {
@@ -122,11 +193,21 @@ function drawWind(ctx: CanvasRenderingContext2D, state: GameState): void {
 
 function drawPlatforms(ctx: CanvasRenderingContext2D, state: GameState): void {
   for (const p of state.world.platforms) {
-    roundRect(ctx, p.x, p.y, p.w, p.h, 8);
-    ctx.fillStyle = PLATFORM;
-    ctx.fill();
+    ctx.save();
+    roundRect(ctx, p.x, p.y, p.w, p.h, 4);
+    ctx.clip();
+    const shade = ctx.createLinearGradient(p.x, p.y, p.x, p.y + p.h);
+    shade.addColorStop(0, "#161e2c");
+    shade.addColorStop(0.45, "#121826");
+    shade.addColorStop(1, "#0c121c");
+    ctx.fillStyle = shade;
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    const rim = Math.min(RIM_H, p.h);
     ctx.fillStyle = PLATFORM_TOP;
-    ctx.fillRect(p.x, p.y, p.w, 4);
+    ctx.fillRect(p.x, p.y, p.w, rim);
+    ctx.fillStyle = PLATFORM_SPEC;
+    ctx.fillRect(p.x, p.y, p.w, 1);
+    ctx.restore();
   }
 }
 
@@ -134,19 +215,53 @@ function drawTargets(ctx: CanvasRenderingContext2D, state: GameState): void {
   const live = remainingTargets(state);
   for (const t of live) {
     const pulse = 1 + Math.sin(state.time * 4) * 0.08;
+    const bloom = ctx.createRadialGradient(t.x, t.y, t.r * 0.2, t.x, t.y, t.r * 2.45);
+    bloom.addColorStop(0, "rgba(242, 182, 42, 0.42)");
+    bloom.addColorStop(0.38, "rgba(242, 182, 42, 0.16)");
+    bloom.addColorStop(1, "rgba(242, 182, 42, 0)");
+    ctx.fillStyle = bloom;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, t.r * 2.45, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.strokeStyle = GOLD;
-    ctx.globalAlpha = 0.35;
+    ctx.globalAlpha = 0.3;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(t.x, t.y, t.r * 1.55 * pulse, 0, Math.PI * 2);
+    ctx.arc(t.x, t.y, t.r * 1.48 * pulse, 0, Math.PI * 2);
     ctx.stroke();
     ctx.globalAlpha = 1;
-    ctx.fillStyle = GOLD;
-    ctx.beginPath();
-    ctx.arc(t.x, t.y, t.r * 0.42, 0, Math.PI * 2);
-    ctx.fill();
+
     ctx.strokeStyle = GOLD;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = "round";
+    ctx.globalAlpha = 0.88;
+    for (let i = 0; i < 8; i += 1) {
+      const a = (Math.PI * 2 * i) / 8 - Math.PI / 2;
+      ctx.beginPath();
+      ctx.moveTo(t.x + Math.cos(a) * t.r * 1.7, t.y + Math.sin(a) * t.r * 1.7);
+      ctx.lineTo(t.x + Math.cos(a) * t.r * 2.0, t.y + Math.sin(a) * t.r * 2.0);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.lineCap = "butt";
+
+    const coreR = t.r - 2.6;
+    const core = ctx.createRadialGradient(t.x - coreR * 0.32, t.y - coreR * 0.38, coreR * 0.06, t.x, t.y, coreR);
+    core.addColorStop(0, CORE_HI);
+    core.addColorStop(1, GOLD);
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, coreR, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = SPECULAR;
+    ctx.beginPath();
+    ctx.arc(t.x - coreR * 0.32, t.y - coreR * 0.38, Math.max(1.15, coreR * 0.14), 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = GOLD;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.arc(t.x, t.y, t.r, 0, Math.PI * 2);
     ctx.stroke();
@@ -221,8 +336,18 @@ function drawBall(ctx: CanvasRenderingContext2D, state: GameState): void {
     ctx.rotate(Math.atan2(vel.y, vel.x));
     ctx.scale(stretch, 1 / Math.sqrt(stretch));
   }
+  if (heat < 0.08) {
+    const glow = ctx.createRadialGradient(0, 0, BALL_RADIUS * 0.2, 0, 0, BALL_RADIUS * 3.1);
+    glow.addColorStop(0, "rgba(125, 240, 255, 0.32)");
+    glow.addColorStop(0.45, "rgba(125, 240, 255, 0.1)");
+    glow.addColorStop(1, "rgba(125, 240, 255, 0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, BALL_RADIUS * 3.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.shadowColor = heatColor(heat);
-  ctx.shadowBlur = 18 + rush * 26;
+  ctx.shadowBlur = 24 + rush * 26;
   const g = ctx.createRadialGradient(-3, -4, 2, 0, 0, BALL_RADIUS);
   g.addColorStop(0, "#ffffff");
   g.addColorStop(0.42, heat < 0.08 ? BALL : heatColor(heat * 0.55));
@@ -271,6 +396,17 @@ function drawSpeedLines(
 
 function drawParticles(ctx: CanvasRenderingContext2D, state: GameState): void {
   for (const p of state.particles) {
+    if (p.kind === "ring") {
+      const maxLife = p.maxLife ?? 0.55;
+      const u = 1 - Math.max(0, p.life) / maxLife;
+      ctx.globalAlpha = Math.max(0, 1 - u) * 0.9;
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(p.pos.x, p.pos.y, TARGET_RADIUS + u * 38, 0, Math.PI * 2);
+      ctx.stroke();
+      continue;
+    }
     ctx.globalAlpha = Math.max(0, p.life * 2);
     ctx.fillStyle = p.color;
     ctx.beginPath();

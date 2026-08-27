@@ -1,7 +1,7 @@
 import { controlPad, createGame, flightRush, heatAmount, layoutCamera, nextLevel, pointerUp, predictPath, remainingShots, resetLevel, tick } from "./game.ts";
 import { aimFromStick, knobFromPointer, STICK_KNOB_R } from "./input.ts";
 import { GROUND_TOP, LEVELS } from "./levels.ts";
-import { MAX_PULL, MAX_SHOTS } from "./math.ts";
+import { MAX_PULL, MAX_SHOTS, BALL_RADIUS, TARGET_RADIUS, WORLD } from "./math.ts";
 import { createBall, hitsCircle, isSupported, stepWorld } from "./physics.ts";
 import { rememberStars, starsFromShots } from "./progress.ts";
 import { heatColor } from "./render.ts";
@@ -100,6 +100,70 @@ const best = rememberStars(0, 2);
 if (best[0] !== 2) throw new Error(`best stars should record 2, got ${best[0]}`);
 if (!heatColor(1).includes("255") || !heatColor(1).includes("90")) {
   throw new Error(`max heat should be coral-red, got ${heatColor(1)}`);
+}
+
+if (BALL_RADIUS !== 11) throw new Error(`ball radius must stay 11, got ${BALL_RADIUS}`);
+if (TARGET_RADIUS !== 16) throw new Error(`beacon radius must stay 16, got ${TARGET_RADIUS}`);
+
+const frozenPlatforms = [
+  [{ x: 0, y: 430, w: 360, h: 210 }],
+  [{ x: 0, y: 430, w: 360, h: 210 }],
+  [
+    { x: 0, y: 370, w: 110, h: 270 },
+    { x: 250, y: 370, w: 110, h: 270 },
+  ],
+  [
+    { x: 0, y: 430, w: 360, h: 210 },
+    { x: 328, y: 60, w: 32, h: 370 },
+    { x: 180, y: 270, w: 90, h: 18 },
+  ],
+  [
+    { x: 0, y: 430, w: 360, h: 210 },
+    { x: 210, y: 270, w: 100, h: 16 },
+  ],
+  [
+    { x: 0, y: 430, w: 360, h: 210 },
+    { x: 130, y: 310, w: 80, h: 16 },
+    { x: 250, y: 190, w: 90, h: 16 },
+    { x: 0, y: 90, w: 24, h: 340 },
+  ],
+] as const;
+
+LEVELS.forEach((level, i) => {
+  if (!level.sky) throw new Error(`level ${i} is missing sky data`);
+  const got = JSON.stringify(level.platforms);
+  const want = JSON.stringify(frozenPlatforms[i]);
+  if (got !== want) throw new Error(`level ${i} platform layout changed: ${got}`);
+});
+if (LEVELS[0].sky.planet?.r !== 28) throw new Error("L1 planet radius should be ~28");
+if (LEVELS[0].sky.planet && (LEVELS[0].sky.planet.x > WORLD.w / 2 || LEVELS[0].sky.planet.y > 160)) {
+  throw new Error("L1 planet should sit upper-left");
+}
+if (LEVELS[1].sky.stars <= LEVELS[0].sky.stars) throw new Error("L2 should have denser stars than L1");
+if (LEVELS[2].sky.planet) throw new Error("L3 should have no planet");
+if (LEVELS[2].sky.stars >= LEVELS[0].sky.stars) throw new Error("L3 should have fewer stars than L1");
+if (LEVELS[3].sky.planet) throw new Error("L4 should have no planet");
+if (!LEVELS[4].sky.nebulae.some((n) => {
+  const v = Number.parseInt(n.color.replace("#", ""), 16);
+  const r = (v >> 16) & 255;
+  const b = v & 255;
+  return b > r + 40;
+})) {
+  throw new Error("L5 nebula should be cyan dust");
+}
+if (!LEVELS[5].sky.planet || LEVELS[5].sky.planet.x < WORLD.w / 2) throw new Error("L6 should have a small planet upper-right");
+
+const grab = resetLevel(0);
+grab.phase = "flying";
+grab.world.ball.pos = { x: LEVELS[0].targets[0].x, y: LEVELS[0].targets[0].y };
+grab.world.ball.vel = { x: 0, y: 0 };
+tick(grab, 1 / 60, silent);
+if (!grab.collected[0]) throw new Error("touching the beacon should collect it");
+if (!grab.particles.some((p) => p.kind === "ring" && p.color === "#F2B62A")) {
+  throw new Error("collect should spawn an expanding gold ring");
+}
+if (grab.particles.filter((p) => p.kind !== "ring").length < 8) {
+  throw new Error("collect should keep burst particles");
 }
 
 console.log("ok", { phase: g.phase, shots: g.shots, collected: g.collected, ball: g.world.ball.pos });

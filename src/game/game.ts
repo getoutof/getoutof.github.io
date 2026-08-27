@@ -10,6 +10,8 @@ export type Particle = {
   vel: Vec;
   life: number;
   color: string;
+  kind?: "ring";
+  maxLife?: number;
 };
 
 export type Camera = {
@@ -305,6 +307,14 @@ function collectTargets(state: GameState, sfx: SfxHooks): void {
     if (hitsCircle(state.world.ball, circle)) {
       state.collected[index] = true;
       burst(state, circle, "#F2B62A", 16);
+      state.particles.push({
+        pos: clone(circle),
+        vel: { x: 0, y: 0 },
+        life: 0.55,
+        maxLife: 0.55,
+        color: "#F2B62A",
+        kind: "ring",
+      });
       sfx.collect();
     }
   });
@@ -347,6 +357,7 @@ function burst(state: GameState, pos: Vec, color: string, count: number): void {
 function updateParticles(state: GameState, dt: number): void {
   for (const p of state.particles) {
     p.life -= dt;
+    if (p.kind === "ring") continue;
     p.pos.x += p.vel.x * dt;
     p.pos.y += p.vel.y * dt;
     p.vel.y += 220 * dt;
