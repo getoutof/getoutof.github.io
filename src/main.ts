@@ -3,6 +3,7 @@ import { createAudio } from "./game/audio.ts";
 import {
   createGame,
   currentLevel,
+  isLastLevel,
   layoutCamera,
   LEVELS,
   MAX_PULL,
@@ -158,7 +159,7 @@ function onPlay(): void {
   }
   hideGameplayOverlay();
   if (state.phase === "win") {
-    state = nextLevel(state);
+    state = isLastLevel(state.levelIndex) ? resetLevel(0) : nextLevel(state);
   } else if (state.phase === "fail") {
     state = resetLevel(state.levelIndex);
   } else if (state.phase === "title") {
@@ -250,12 +251,15 @@ function frame(now: number): void {
       haptic("heavy");
       const earned = starsFromShots(state.shots);
       const best = rememberStars(state.levelIndex, earned);
-      const lastLevel = state.levelIndex === LEVELS.length - 1;
+      const lastLevel = isLastLevel(state.levelIndex);
       overlayMode = "win";
       const bestNote = best[state.levelIndex] > earned ? ` Лучший результат: ${best[state.levelIndex]}★` : "";
+      const lead = lastLevel
+        ? `Это был последний уровень. ${starLine(earned)}.${bestNote}`
+        : `${starLine(earned)}.${bestNote}`;
       showOverlay(
         lastLevel ? "Орбита закрыта" : "Маяки собраны",
-        `${starLine(earned)}.${bestNote}`,
+        lead,
         lastLevel ? "Сначала" : "Дальше",
         `<p class="stars-result">${starsMarkup(earned)}</p>`,
       );
