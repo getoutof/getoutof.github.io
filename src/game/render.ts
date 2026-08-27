@@ -232,20 +232,6 @@ function drawTargets(ctx: CanvasRenderingContext2D, state: GameState): void {
     ctx.stroke();
     ctx.globalAlpha = 1;
 
-    ctx.strokeStyle = GOLD;
-    ctx.lineWidth = 1.5;
-    ctx.lineCap = "round";
-    ctx.globalAlpha = 0.88;
-    for (let i = 0; i < 8; i += 1) {
-      const a = (Math.PI * 2 * i) / 8 - Math.PI / 2;
-      ctx.beginPath();
-      ctx.moveTo(t.x + Math.cos(a) * t.r * 1.7, t.y + Math.sin(a) * t.r * 1.7);
-      ctx.lineTo(t.x + Math.cos(a) * t.r * 2.0, t.y + Math.sin(a) * t.r * 2.0);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-    ctx.lineCap = "butt";
-
     const coreR = t.r - 2.6;
     const core = ctx.createRadialGradient(t.x - coreR * 0.32, t.y - coreR * 0.38, coreR * 0.06, t.x, t.y, coreR);
     core.addColorStop(0, CORE_HI);
