@@ -12,7 +12,9 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  # One publish at a time. Overlapping cursor/** jobs with clean:true
+  # recopy older hashed assets after a newer job already cleaned main.
+  cancel-in-progress: true
 
 jobs:
   build-and-publish:
