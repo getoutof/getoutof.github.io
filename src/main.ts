@@ -78,6 +78,10 @@ function levelListMarkup(): string {
 
 function bindOverlay(): void {
   overlay.querySelector("#play")?.addEventListener("click", onPlay);
+  overlay.querySelector("[data-back]")?.addEventListener("click", () => {
+    hideGameplayOverlay();
+    syncHud();
+  });
   overlay.querySelectorAll<HTMLButtonElement>("[data-level]").forEach((btn) => {
     btn.addEventListener("click", () => startLevel(Number(btn.dataset.level)));
   });
@@ -125,7 +129,7 @@ function showLevels(): void {
       <h1>Уровни</h1>
       <p class="lead">Лучший результат по звёздам.</p>
       ${levelListMarkup()}
-      <button id="play" type="button" class="primary">Назад</button>
+      <button type="button" class="primary" data-back>Назад</button>
     </div>
   `;
   bindOverlay();
