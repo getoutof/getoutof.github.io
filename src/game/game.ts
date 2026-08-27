@@ -246,7 +246,7 @@ export function tick(state: GameState, dt: number, sfx: SfxHooks): void {
 
     if (allCollected(state)) {
       state.phase = "win";
-      burst(state, state.world.ball.pos, "#ffb703", 22);
+      burst(state, state.world.ball.pos, "#F2B62A", 22);
       sfx.win();
       return;
     }
@@ -304,7 +304,7 @@ function collectTargets(state: GameState, sfx: SfxHooks): void {
     if (state.collected[index]) return;
     if (hitsCircle(state.world.ball, circle)) {
       state.collected[index] = true;
-      burst(state, circle, "#ffb703", 16);
+      burst(state, circle, "#F2B62A", 16);
       sfx.collect();
     }
   });

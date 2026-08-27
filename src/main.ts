@@ -20,6 +20,7 @@ import {
 import { firstOpenLevel, loadBestStars, rememberStars, starsFromShots } from "./game/progress.ts";
 import { draw, resizeCanvas } from "./game/render.ts";
 import { haptic, lockPageChrome, safeAreaBottom } from "./platform.ts";
+import { WORDMARK_SVG } from "./wordmark.ts";
 
 function required<T>(value: T | null, message: string): T {
   if (!value) throw new Error(message);
@@ -105,7 +106,7 @@ function showTitle(): void {
   overlay.innerHTML = `
     <div class="panel">
       <p class="eyebrow">слэнгшот</p>
-      <h1>Trajectry</h1>
+      ${WORDMARK_SVG}
       <p class="lead">Оттяни нижний шар и отпусти — попади во все маяки.</p>
       ${levelListMarkup()}
       <button id="play" type="button" class="primary">Играть</button>

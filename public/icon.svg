@@ -1,8 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="28" fill="#07080f"/>
-  <circle cx="36" cy="88" r="10" fill="#e8fbff"/>
-  <circle cx="58" cy="62" r="4" fill="#7df0ff"/>
-  <circle cx="78" cy="46" r="4" fill="#7df0ff"/>
-  <circle cx="98" cy="34" r="8" fill="none" stroke="#ffb703" stroke-width="4"/>
-  <circle cx="98" cy="34" r="3" fill="#ffb703"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Trajectry">
+  <rect width="128" height="128" rx="28" fill="#07080F"/>
+  <circle cx="36" cy="90" r="11" fill="#F4F1EA"/>
+  <circle cx="58" cy="64" r="4" fill="#7DF0FF"/>
+  <circle cx="78" cy="46" r="4" fill="#7DF0FF"/>
+  <circle cx="100" cy="32" r="11" fill="none" stroke="#F2B62A" stroke-width="4.5"/>
+  <circle cx="100" cy="32" r="3.4" fill="#F2B62A"/>
 </svg>

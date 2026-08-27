@@ -5,14 +5,14 @@ import { BALL_RADIUS, WORLD } from "./math.ts";
 const BG = "#07080f";
 const BALL = "#e8fbff";
 const ACCENT = "#7df0ff";
-const GOLD = "#ffb703";
+const GOLD = "#F2B62A";
 const PLATFORM = "#1a2233";
 const PLATFORM_TOP = "#2b3750";
 
 type Rgb = { r: number; g: number; b: number };
 
 const CYAN_RGB: Rgb = { r: 125, g: 240, b: 255 };
-const GOLD_RGB: Rgb = { r: 255, g: 183, b: 3 };
+const GOLD_RGB: Rgb = { r: 242, g: 182, b: 42 };
 const HOT_RGB: Rgb = { r: 255, g: 90, b: 78 };
 
 function mixRgb(a: Rgb, b: Rgb, t: number): Rgb {

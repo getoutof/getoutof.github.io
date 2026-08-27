@@ -4,7 +4,7 @@
   --ink: #f4f1ea;
   --muted: #9aa3b5;
   --accent: #7df0ff;
-  --gold: #ffb703;
+  --gold: #F2B62A;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -21,7 +21,7 @@ body {
   overflow: hidden;
   background: var(--bg);
   color: var(--ink);
-  font-family: ui-rounded, "SF Pro Rounded", "Segoe UI", system-ui, sans-serif;
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -134,7 +134,7 @@ body {
   margin: 0;
   color: var(--ink);
   font-size: clamp(28px, 8vw, 40px);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.03em;
   text-shadow: 0 8px 24px rgb(7 8 15 / 0.8);
 }
@@ -147,7 +147,7 @@ body {
   justify-content: center;
   padding: calc(12vh + env(safe-area-inset-top, 0px)) 20px calc(28px + env(safe-area-inset-bottom, 0px));
   background:
-    linear-gradient(180deg, rgb(7 8 15 / 0.2), rgb(7 8 15 / 0.78) 42%, rgb(7 8 15 / 0.94));
+    linear-gradient(180deg, rgb(7 8 15 / 0.102), rgb(7 8 15 / 0.6) 38%, rgb(7 8 15 / 0.878));
   touch-action: pan-y;
 }
 
@@ -275,4 +275,44 @@ h1 {
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+h1,
+.banner-title,
+.primary {
+  font-family: Unbounded, sans-serif;
+  font-weight: 700;
+}
+
+.wordmark {
+  display: block;
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0 0 14px;
+  color: var(--ink);
+  aspect-ratio: 8239 / 1250;
+}
+
+.eyebrow,
+.lead,
+.hud-row,
+.ghost,
+.toast,
+.level-btn,
+.banner-kicker,
+.level-name,
+.level-index {
+  font-family: Manrope, sans-serif;
+}
+
+.lead {
+  font-weight: 500;
+}
+
+.ghost,
+.hud-row,
+.level-name {
+  font-weight: 600;
 }
