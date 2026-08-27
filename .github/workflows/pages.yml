@@ -3,6 +3,7 @@ name: Deploy GitHub Pages
 on:
   push:
     branches:
+      - dev
       - "cursor/**"
   workflow_dispatch:
 
@@ -25,9 +26,13 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      # Publishes dist onto main (Pages). Never merge source into main.
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
           branch: main
-          clean: false
+          clean: true
+          clean-exclude: |
+            README.md
+            .nojekyll
           commit-message: "Publish Trajectry web build to GitHub Pages"
