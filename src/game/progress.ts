@@ -38,7 +38,14 @@ export function rememberStars(levelIndex: number, stars: number): number[] {
   return best;
 }
 
-export function firstOpenLevel(): number {
-  const i = loadBestStars().findIndex((stars) => stars === 0);
+export function isLevelOpen(index: number, best: number[] = loadBestStars()): boolean {
+  if (index < 0 || index >= LEVELS.length) return false;
+  if (index === 0) return true;
+  if ((best[index] ?? 0) >= 1) return true;
+  return (best[index - 1] ?? 0) >= 1;
+}
+
+export function firstOpenLevel(best: number[] = loadBestStars()): number {
+  const i = LEVELS.findIndex((_, index) => isLevelOpen(index, best) && (best[index] ?? 0) === 0);
   return i === -1 ? 0 : i;
 }

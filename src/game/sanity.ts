@@ -1,9 +1,9 @@
-import { attemptsFraction, controlPad, createGame, flightRush, heatAmount, isLastLevel, layoutCamera, nextLevel, pointerUp, predictPath, remainingShots, remainingTargets, resetLevel, tick } from "./game.ts";
-import { aimFromStick, knobFromPointer, STICK_KNOB_R } from "./input.ts";
+import { attemptsFraction, controlPad, createGame, flightRush, heatAmount, isLastLevel, layoutCamera, nextLevel, pointerDownStick, pointerUp, predictPath, remainingShots, remainingTargets, resetLevel, tick } from "./game.ts";
+import { aimFromStick, inControlZone, knobFromPointer, STICK_KNOB_R } from "./input.ts";
 import { GROUND_TOP, LEVELS, targetPos, type LevelDef, type TargetDef } from "./levels.ts";
 import { MAX_PULL, MAX_SHOTS, BALL_RADIUS, TARGET_RADIUS, WORLD } from "./math.ts";
 import { createBall, hitsCircle, isSupported, stepWorld } from "./physics.ts";
-import { rememberStars, starsFromShots } from "./progress.ts";
+import { emptyStars, firstOpenLevel, isLevelOpen, rememberStars, starsFromShots } from "./progress.ts";
 import { createAudio, MUTE_KEY } from "./audio.ts";
 import { draw, heatColor } from "./render.ts";
 
@@ -116,10 +116,15 @@ if (title.banner) throw new Error("title should not show level banner");
 
 const view = { w: 360, h: 640 };
 const cam = layoutCamera(view.w, view.h);
-const pad = controlPad(view, cam, 0);
-const groundY = cam.offsetY + GROUND_TOP * cam.scale;
-const midY = (groundY + view.h) / 2;
-if (Math.abs(pad.y - midY) > 0.01) throw new Error(`stick should sit between ground and screen, got ${pad.y} expected ${midY}`);
+const spawnAim = resetLevel(0);
+const pad = controlPad(cam, spawnAim.world.ball.pos);
+const spawnScreen = {
+  x: cam.offsetX + spawnAim.world.ball.pos.x * cam.scale,
+  y: cam.offsetY + spawnAim.world.ball.pos.y * cam.scale,
+};
+if (Math.abs(pad.x - spawnScreen.x) > 0.01 || Math.abs(pad.y - spawnScreen.y) > 0.01) {
+  throw new Error(`stick should sit on the ball, got ${JSON.stringify(pad)} expected ${JSON.stringify(spawnScreen)}`);
+}
 
 const far = { x: pad.x + 400, y: pad.y + 400 };
 const pull = aimFromStick(pad, far, cam.scale);
@@ -136,6 +141,43 @@ if (Math.abs(topKnob.y - STICK_KNOB_R) > 0.01) {
 const near = { x: pad.x + 20, y: pad.y };
 const shortPull = aimFromStick(pad, near, cam.scale);
 if (Math.hypot(shortPull.x, shortPull.y) >= MAX_PULL * 0.5) throw new Error("short drag should stay below half power");
+
+const ledge = resetLevel(3);
+ledge.phase = "aiming";
+const bankShelf = LEVELS[3].platforms[2];
+ledge.world.ball.pos = { x: bankShelf.x + bankShelf.w / 2, y: bankShelf.y - BALL_RADIUS };
+const ledgeGrab = controlPad(cam, ledge.world.ball.pos);
+const ballScreen = {
+  x: cam.offsetX + ledge.world.ball.pos.x * cam.scale,
+  y: cam.offsetY + ledge.world.ball.pos.y * cam.scale,
+};
+if (Math.abs(ledgeGrab.x - ballScreen.x) > 0.01 || Math.abs(ledgeGrab.y - ballScreen.y) > 0.01) {
+  throw new Error(`grab after settle should sit on the ball, got ${JSON.stringify(ledgeGrab)}`);
+}
+const oldBottomPad = {
+  x: view.w / 2,
+  y: (cam.offsetY + GROUND_TOP * cam.scale + view.h) / 2,
+};
+if (Math.abs(ledgeGrab.y - oldBottomPad.y) < 40) {
+  throw new Error(`grab should leave the bottom pad, ball=${ledgeGrab.y} pad=${oldBottomPad.y}`);
+}
+if (!inControlZone(ledgeGrab, ballScreen, cam.scale)) throw new Error("finger on the ball should be in the grab zone");
+if (inControlZone(ledgeGrab, oldBottomPad, cam.scale)) {
+  throw new Error("the old bottom pad must not stay in the grab zone after a high settle");
+}
+
+const fakeCanvas = {
+  getBoundingClientRect: () => ({ left: 0, top: 0, width: view.w, height: view.h }),
+} as HTMLCanvasElement;
+pointerDownStick(ledge, fakeCanvas, cam, ballScreen.x, ballScreen.y);
+if (!ledge.aim) throw new Error("pointer on the settled ball should start aim");
+ledge.aim = null;
+pointerDownStick(ledge, fakeCanvas, cam, oldBottomPad.x, oldBottomPad.y);
+if (ledge.aim) throw new Error("pointer on the empty bottom pad should not start aim");
+ledge.paused = true;
+pointerDownStick(ledge, fakeCanvas, cam, ballScreen.x, ballScreen.y);
+if (ledge.aim) throw new Error("paused overlay must ignore aim on the ball");
+ledge.paused = false;
 
 const delayed = resetLevel(0);
 delayed.aim = { origin: delayed.world.ball.pos, pull: { x: 0, y: -MAX_PULL }, pointer: pad };
@@ -158,6 +200,37 @@ if (starsFromShots(1) !== 3 || starsFromShots(2) !== 2 || starsFromShots(3) !== 
 }
 const best = rememberStars(0, 2);
 if (best[0] !== 2) throw new Error(`best stars should record 2, got ${best[0]}`);
+
+const locked = emptyStars();
+if (!isLevelOpen(0, locked)) throw new Error("level 0 must always be open");
+if (isLevelOpen(1, locked)) throw new Error("level 1 must stay locked without stars on 0");
+if (isLevelOpen(5, locked)) throw new Error("later levels must stay locked without previous stars");
+if (firstOpenLevel(locked) !== 0) throw new Error(`empty save should start at 0, got ${firstOpenLevel(locked)}`);
+
+const afterFirstStar = emptyStars();
+afterFirstStar[0] = 1;
+if (!isLevelOpen(1, afterFirstStar)) throw new Error("level 1 should open after 1★ on 0");
+if (isLevelOpen(2, afterFirstStar)) throw new Error("level 2 should stay locked until level 1 has a star");
+if (firstOpenLevel(afterFirstStar) !== 1) {
+  throw new Error(`Play should start the first 0★ open level, got ${firstOpenLevel(afterFirstStar)}`);
+}
+
+const jumpedAhead = emptyStars();
+jumpedAhead[4] = 2;
+if (isLevelOpen(1, jumpedAhead) || isLevelOpen(3, jumpedAhead)) {
+  throw new Error("unstarred levels before a jump must stay locked");
+}
+if (!isLevelOpen(4, jumpedAhead)) throw new Error("already-starred later level must stay open");
+if (!isLevelOpen(5, jumpedAhead)) throw new Error("the level after an already-starred save should open");
+if (firstOpenLevel(jumpedAhead) !== 0) {
+  throw new Error(`Play should still start the first open 0★ (level 0), got ${firstOpenLevel(jumpedAhead)}`);
+}
+
+const allClear = LEVELS.map(() => 3);
+if (firstOpenLevel(allClear) !== 0) throw new Error("all complete should wrap Play back to 0");
+if (!allClear.every((_, i) => isLevelOpen(i, allClear))) {
+  throw new Error("every starred level should count as open");
+}
 if (!heatColor(1).includes("255") || !heatColor(1).includes("90")) {
   throw new Error(`max heat should be coral-red, got ${heatColor(1)}`);
 }

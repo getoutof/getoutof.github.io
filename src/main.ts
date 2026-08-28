@@ -17,7 +17,7 @@ import {
   type Camera,
   type GameState,
 } from "./game/game.ts";
-import { firstOpenLevel, loadBestStars, rememberStars, starsFromShots } from "./game/progress.ts";
+import { firstOpenLevel, isLevelOpen, loadBestStars, rememberStars, starsFromShots } from "./game/progress.ts";
 import { draw, resizeCanvas } from "./game/render.ts";
 import {
   fullscreenAvailable,
@@ -73,18 +73,19 @@ function starLine(stars: number): string {
 
 function levelListMarkup(): string {
   const best = loadBestStars();
-  return `<ol class="levels">${LEVELS.map(
-    (level, i) => `
+  return `<ol class="levels">${LEVELS.map((level, i) => {
+    const open = isLevelOpen(i, best);
+    return `
     <li>
-      <button type="button" class="level-btn" data-level="${i}">
+      <button type="button" class="level-btn" data-level="${i}"${open ? "" : " disabled"}>
         <span class="level-index">${i + 1}</span>
         <span class="level-meta">
           <span class="level-name">${level.name}</span>
           ${best[i] ? starsMarkup(best[i]) : starsMarkup(0, true)}
         </span>
       </button>
-    </li>`,
-  ).join("")}</ol>`;
+    </li>`;
+  }).join("")}</ol>`;
 }
 
 function muteLabel(): string {
@@ -120,6 +121,7 @@ function bindOverlay(): void {
     void onFullscreenToggle();
   });
   overlay.querySelectorAll<HTMLButtonElement>("[data-level]").forEach((btn) => {
+    if (btn.disabled) return;
     btn.addEventListener("click", () => startLevel(Number(btn.dataset.level)));
   });
 }
@@ -211,6 +213,7 @@ function hideGameplayOverlay(): void {
 }
 
 function startLevel(index: number): void {
+  if (!isLevelOpen(index)) return;
   sfx.setTitleQuiet(false);
   void sfx.resume();
   state = resetLevel(index);
@@ -261,7 +264,7 @@ function syncHud(): void {
 }
 
 function stickArgs(event: PointerEvent) {
-  return [canvas, camera, view, safeAreaBottom(), event.clientX, event.clientY] as const;
+  return [canvas, camera, event.clientX, event.clientY] as const;
 }
 
 canvas.addEventListener("pointerdown", (event) => {
