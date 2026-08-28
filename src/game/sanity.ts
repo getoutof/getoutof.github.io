@@ -116,14 +116,17 @@ if (title.banner) throw new Error("title should not show level banner");
 
 const view = { w: 360, h: 640 };
 const cam = layoutCamera(view.w, view.h);
-const spawnAim = resetLevel(0);
-const pad = controlPad(cam, spawnAim.world.ball.pos);
-const spawnScreen = {
-  x: cam.offsetX + spawnAim.world.ball.pos.x * cam.scale,
-  y: cam.offsetY + spawnAim.world.ball.pos.y * cam.scale,
-};
-if (Math.abs(pad.x - spawnScreen.x) > 0.01 || Math.abs(pad.y - spawnScreen.y) > 0.01) {
-  throw new Error(`stick should sit on the ball, got ${JSON.stringify(pad)} expected ${JSON.stringify(spawnScreen)}`);
+const pad = controlPad(view, cam, 0);
+const groundY = cam.offsetY + GROUND_TOP * cam.scale;
+const midY = (groundY + view.h) / 2;
+if (Math.abs(pad.x - view.w / 2) > 0.01) {
+  throw new Error(`stick should sit at screen center, got x=${pad.x}`);
+}
+if (Math.abs(pad.y - midY) > 0.01) {
+  throw new Error(`stick should sit between ground and screen, got ${pad.y} expected ${midY}`);
+}
+if (!(pad.y > groundY && pad.y < view.h)) {
+  throw new Error(`stick should sit between ground and screen bottom, ground=${groundY} pad=${pad.y} bottom=${view.h}`);
 }
 
 const far = { x: pad.x + 400, y: pad.y + 400 };
@@ -146,37 +149,31 @@ const ledge = resetLevel(3);
 ledge.phase = "aiming";
 const bankShelf = LEVELS[3].platforms[2];
 ledge.world.ball.pos = { x: bankShelf.x + bankShelf.w / 2, y: bankShelf.y - BALL_RADIUS };
-const ledgeGrab = controlPad(cam, ledge.world.ball.pos);
+const ledgePad = controlPad(view, cam, 0);
 const ballScreen = {
   x: cam.offsetX + ledge.world.ball.pos.x * cam.scale,
   y: cam.offsetY + ledge.world.ball.pos.y * cam.scale,
 };
-if (Math.abs(ledgeGrab.x - ballScreen.x) > 0.01 || Math.abs(ledgeGrab.y - ballScreen.y) > 0.01) {
-  throw new Error(`grab after settle should sit on the ball, got ${JSON.stringify(ledgeGrab)}`);
+if (Math.abs(ledgePad.x - view.w / 2) > 0.01 || Math.abs(ledgePad.y - midY) > 0.01) {
+  throw new Error(`grab after settle should stay on the bottom pad, got ${JSON.stringify(ledgePad)}`);
 }
-const oldBottomPad = {
-  x: view.w / 2,
-  y: (cam.offsetY + GROUND_TOP * cam.scale + view.h) / 2,
-};
-if (Math.abs(ledgeGrab.y - oldBottomPad.y) < 40) {
-  throw new Error(`grab should leave the bottom pad, ball=${ledgeGrab.y} pad=${oldBottomPad.y}`);
+if (Math.abs(ledgePad.y - ballScreen.y) < 40) {
+  throw new Error(`high-ledge ball must not be the grab origin, ball=${ballScreen.y} pad=${ledgePad.y}`);
 }
-if (!inControlZone(ledgeGrab, ballScreen, cam.scale)) throw new Error("finger on the ball should be in the grab zone");
-if (inControlZone(ledgeGrab, oldBottomPad, cam.scale)) {
-  throw new Error("the old bottom pad must not stay in the grab zone after a high settle");
+if (!inControlZone(ledgePad, ledgePad, cam.scale)) throw new Error("finger on the bottom pad should be in the grab zone");
+if (inControlZone(ledgePad, ballScreen, cam.scale)) {
+  throw new Error("a high-ledge ball must not sit in the grab zone");
 }
 
 const fakeCanvas = {
   getBoundingClientRect: () => ({ left: 0, top: 0, width: view.w, height: view.h }),
 } as HTMLCanvasElement;
-pointerDownStick(ledge, fakeCanvas, cam, ballScreen.x, ballScreen.y);
-if (!ledge.aim) throw new Error("pointer on the settled ball should start aim");
+pointerDownStick(ledge, fakeCanvas, cam, view, 0, ledgePad.x, ledgePad.y);
+if (!ledge.aim) throw new Error("pointer on the empty bottom pad should start aim on Банк от стены's shelf");
 ledge.aim = null;
-pointerDownStick(ledge, fakeCanvas, cam, oldBottomPad.x, oldBottomPad.y);
-if (ledge.aim) throw new Error("pointer on the empty bottom pad should not start aim");
 ledge.paused = true;
-pointerDownStick(ledge, fakeCanvas, cam, ballScreen.x, ballScreen.y);
-if (ledge.aim) throw new Error("paused overlay must ignore aim on the ball");
+pointerDownStick(ledge, fakeCanvas, cam, view, 0, ledgePad.x, ledgePad.y);
+if (ledge.aim) throw new Error("paused overlay must ignore aim");
 ledge.paused = false;
 
 const delayed = resetLevel(0);

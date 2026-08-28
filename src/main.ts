@@ -189,7 +189,7 @@ function showTitle(): void {
     <div class="panel">
       <p class="eyebrow">слэнгшот</p>
       ${WORDMARK_SVG}
-      <p class="lead">Оттяни нижний шар и отпусти — попади во все маяки.</p>
+      <p class="lead">Оттяни нижнюю ручку и отпусти — попади во все маяки.</p>
       ${levelListMarkup()}
       ${overlayFooter(`<button id="play" type="button" class="primary">Играть</button>`, true)}
     </div>
@@ -275,7 +275,7 @@ function syncHud(): void {
 }
 
 function stickArgs(event: PointerEvent) {
-  return [canvas, camera, event.clientX, event.clientY] as const;
+  return [canvas, camera, view, safeAreaBottom(), event.clientX, event.clientY] as const;
 }
 
 canvas.addEventListener("pointerdown", (event) => {
