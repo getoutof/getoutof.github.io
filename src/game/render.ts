@@ -3,7 +3,6 @@ import { knobFromPointer, STICK_KNOB_R, stickWellRadius } from "./input.ts";
 import type { SkyDef, SkyNebula, SkyPlanet } from "./levels.ts";
 import { BALL_RADIUS, TARGET_RADIUS, WORLD } from "./math.ts";
 
-const BG = "#07080f";
 const BALL = "#e8fbff";
 const ACCENT = "#7df0ff";
 const GOLD = "#F2B62A";
@@ -41,16 +40,17 @@ type Star = { x: number; y: number; r: number; a: number };
 
 const starCache = new Map<number, Star[]>();
 
-function starsFor(count: number): Star[] {
-  let list = starCache.get(count);
+function starsFor(count: number, w: number = WORLD.w, h: number = WORLD.h): Star[] {
+  const key = count * 1e9 + w * 1e4 + h;
+  let list = starCache.get(key);
   if (!list) {
     list = Array.from({ length: count }, (_, i) => ({
-      x: (i * 97 + 13) % WORLD.w,
-      y: (i * 53 + 29) % WORLD.h,
+      x: (i * 97 + 13) % w,
+      y: (i * 53 + 29) % h,
       r: 0.4 + (i % 4) * 0.35,
       a: 0.22 + (i % 5) * 0.1,
     }));
-    starCache.set(count, list);
+    starCache.set(key, list);
   }
   return list;
 }
@@ -77,35 +77,69 @@ export function draw(
   state: GameState,
   view: { w: number; h: number },
   safeBottom: number,
+  overlayOpen = false,
 ): Camera {
   const camera = layoutCamera(view.w, view.h);
-  ctx.fillStyle = BG;
-  ctx.fillRect(0, 0, view.w, view.h);
+  const sky = currentLevel(state).sky;
+  drawViewSpace(ctx, sky, state.time, view.w, view.h);
 
-  const rush = flightRush(state);
+  const rush = overlayOpen ? 0 : flightRush(state);
   const look = rush * 0.014;
+  const shake = overlayOpen ? 0 : state.shake;
   ctx.save();
   ctx.translate(
-    camera.offsetX + (Math.random() - 0.5) * state.shake + state.world.ball.vel.x * look * camera.scale,
-    camera.offsetY + (Math.random() - 0.5) * state.shake + state.world.ball.vel.y * look * camera.scale,
+    camera.offsetX + (Math.random() - 0.5) * shake + state.world.ball.vel.x * look * camera.scale,
+    camera.offsetY + (Math.random() - 0.5) * shake + state.world.ball.vel.y * look * camera.scale,
   );
   ctx.scale(camera.scale, camera.scale);
 
-  drawBackdrop(ctx, currentLevel(state).sky, state.time);
-  drawWind(ctx, state);
-  drawPlatforms(ctx, state);
-  drawTargets(ctx, state);
-  drawTrail(ctx, state);
-  if (state.aim) drawTrajectory(ctx, state);
-  drawBall(ctx, state);
-  drawParticles(ctx, state);
+  drawBackdrop(ctx, sky, state.time);
+  if (!overlayOpen) {
+    drawWind(ctx, state);
+    drawPlatforms(ctx, state);
+    drawTargets(ctx, state);
+    drawTrail(ctx, state);
+    if (state.aim) drawTrajectory(ctx, state);
+    drawBall(ctx, state);
+    drawParticles(ctx, state);
+  }
 
   ctx.restore();
   drawVignette(ctx, view.w, view.h, rush);
-  if (state.phase === "aiming" || state.phase === "flying" || state.phase === "settle") {
+  if (!overlayOpen && (state.phase === "aiming" || state.phase === "flying" || state.phase === "settle")) {
     drawStick(ctx, state, view, camera, safeBottom);
   }
   return camera;
+}
+
+function drawViewSpace(ctx: CanvasRenderingContext2D, sky: SkyDef, time: number, w: number, h: number): void {
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, sky.top);
+  g.addColorStop(1, sky.bottom);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+
+  const sx = w / WORLD.w;
+  const sy = h / WORLD.h;
+  const nebulaScale = Math.max(sx, sy);
+  for (const blob of sky.nebulae) {
+    drawNebula(ctx, {
+      ...blob,
+      x: blob.x * sx,
+      y: blob.y * sy,
+      r: blob.r * nebulaScale,
+    });
+  }
+
+  const count = Math.max(sky.stars, Math.round(sky.stars * (w * h) / (WORLD.w * WORLD.h)));
+  for (const star of starsFor(count, w, h)) {
+    ctx.globalAlpha = star.a + Math.sin(time * 1.4 + star.x) * 0.08;
+    ctx.fillStyle = "#d7e4ff";
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 }
 
 function drawBackdrop(ctx: CanvasRenderingContext2D, sky: SkyDef, time: number): void {
@@ -116,7 +150,7 @@ function drawBackdrop(ctx: CanvasRenderingContext2D, sky: SkyDef, time: number):
   ctx.fillRect(0, 0, WORLD.w, WORLD.h);
 
   for (const blob of sky.nebulae) drawNebula(ctx, blob);
-  for (const star of starsFor(sky.stars)) {
+  for (const star of starsFor(sky.stars, WORLD.w, WORLD.h)) {
     ctx.globalAlpha = star.a + Math.sin(time * 1.4 + star.x) * 0.08;
     ctx.fillStyle = "#d7e4ff";
     ctx.beginPath();

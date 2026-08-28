@@ -19,7 +19,15 @@ import {
 } from "./game/game.ts";
 import { firstOpenLevel, loadBestStars, rememberStars, starsFromShots } from "./game/progress.ts";
 import { draw, resizeCanvas } from "./game/render.ts";
-import { haptic, lockPageChrome, safeAreaBottom } from "./platform.ts";
+import {
+  fullscreenAvailable,
+  haptic,
+  isFullscreen,
+  lockPageChrome,
+  onFullscreenChange,
+  safeAreaBottom,
+  toggleFullscreen,
+} from "./platform.ts";
 import { WORDMARK_SVG } from "./wordmark.ts";
 
 function required<T>(value: T | null, message: string): T {
@@ -33,6 +41,8 @@ const hud = required(document.querySelector<HTMLDivElement>("#hud"), "Нет hud
 const play = required(document.querySelector<HTMLButtonElement>("#play"), "Нет кнопки");
 const restart = required(document.querySelector<HTMLButtonElement>("#restart"), "Нет restart");
 const levelsBtn = required(document.querySelector<HTMLButtonElement>("#levels"), "Нет levels");
+const muteHud = required(document.querySelector<HTMLButtonElement>("#mute"), "Нет mute");
+const fullscreenHud = required(document.querySelector<HTMLButtonElement>("#fullscreen"), "Нет fullscreen");
 const levelLabel = required(document.querySelector<HTMLSpanElement>("#level-label"), "Нет level");
 const shotLabel = required(document.querySelector<HTMLSpanElement>("#shot-label"), "Нет shots");
 const toast = required(document.querySelector<HTMLDivElement>("#toast"), "Нет toast");
@@ -77,15 +87,69 @@ function levelListMarkup(): string {
   ).join("")}</ol>`;
 }
 
+function muteLabel(): string {
+  return sfx.isMuted() ? "Тишина" : "Звук";
+}
+
+function fullscreenLabel(): string {
+  return isFullscreen() ? "Окно" : "Экран";
+}
+
+function overlayChrome(): string {
+  const fs = fullscreenAvailable()
+    ? `<button type="button" class="ghost" data-fullscreen>${fullscreenLabel()}</button>`
+    : "";
+  return `<div class="overlay-chrome">
+      <button type="button" class="ghost" data-mute>${muteLabel()}</button>
+      ${fs}
+    </div>`;
+}
+
+function overlayFooter(actionHtml: string, chrome = false): string {
+  return `<div class="overlay-footer">${chrome ? overlayChrome() : ""}${actionHtml}</div>`;
+}
+
 function bindOverlay(): void {
   overlay.querySelector("#play")?.addEventListener("click", onPlay);
   overlay.querySelector("[data-back]")?.addEventListener("click", () => {
     hideGameplayOverlay();
     syncHud();
   });
+  overlay.querySelector("[data-mute]")?.addEventListener("click", onMuteToggle);
+  overlay.querySelector("[data-fullscreen]")?.addEventListener("click", () => {
+    void onFullscreenToggle();
+  });
   overlay.querySelectorAll<HTMLButtonElement>("[data-level]").forEach((btn) => {
     btn.addEventListener("click", () => startLevel(Number(btn.dataset.level)));
   });
+}
+
+function syncChrome(): void {
+  const mute = muteLabel();
+  const full = fullscreenLabel();
+  muteHud.textContent = mute;
+  muteHud.setAttribute("aria-pressed", sfx.isMuted() ? "true" : "false");
+  fullscreenHud.textContent = full;
+  fullscreenHud.setAttribute("aria-pressed", isFullscreen() ? "true" : "false");
+  fullscreenHud.hidden = !fullscreenAvailable();
+  overlay.querySelectorAll<HTMLButtonElement>("[data-mute]").forEach((btn) => {
+    btn.textContent = mute;
+    btn.setAttribute("aria-pressed", sfx.isMuted() ? "true" : "false");
+  });
+  overlay.querySelectorAll<HTMLButtonElement>("[data-fullscreen]").forEach((btn) => {
+    btn.textContent = full;
+    btn.setAttribute("aria-pressed", isFullscreen() ? "true" : "false");
+  });
+}
+
+function onMuteToggle(): void {
+  sfx.setMuted(!sfx.isMuted());
+  syncChrome();
+}
+
+async function onFullscreenToggle(): Promise<void> {
+  await toggleFullscreen();
+  syncChrome();
 }
 
 function showOverlay(title: string, lead: string, action: string, extra = ""): void {
@@ -97,7 +161,7 @@ function showOverlay(title: string, lead: string, action: string, extra = ""): v
       ${extra}
       <p class="lead">${lead}</p>
       ${levelListMarkup()}
-      <button id="play" type="button" class="primary">${action}</button>
+      ${overlayFooter(`<button id="play" type="button" class="primary">${action}</button>`)}
     </div>
   `;
   bindOverlay();
@@ -107,16 +171,18 @@ function showTitle(): void {
   overlayMode = "title";
   overlay.hidden = false;
   hud.hidden = true;
+  sfx.setTitleQuiet(true);
   overlay.innerHTML = `
     <div class="panel">
       <p class="eyebrow">слэнгшот</p>
       ${WORDMARK_SVG}
       <p class="lead">Оттяни нижний шар и отпусти — попади во все маяки.</p>
       ${levelListMarkup()}
-      <button id="play" type="button" class="primary">Играть</button>
+      ${overlayFooter(`<button id="play" type="button" class="primary">Играть</button>`, true)}
     </div>
   `;
   bindOverlay();
+  syncChrome();
 }
 
 function showLevels(): void {
@@ -130,7 +196,7 @@ function showLevels(): void {
       <h1>Уровни</h1>
       <p class="lead">Лучший результат по звёздам.</p>
       ${levelListMarkup()}
-      <button type="button" class="primary" data-back>Назад</button>
+      ${overlayFooter(`<button type="button" class="primary" data-back>Назад</button>`)}
     </div>
   `;
   bindOverlay();
@@ -141,9 +207,11 @@ function hideGameplayOverlay(): void {
   overlay.hidden = true;
   hud.hidden = false;
   state.paused = false;
+  sfx.setTitleQuiet(false);
 }
 
 function startLevel(index: number): void {
+  sfx.setTitleQuiet(false);
   void sfx.resume();
   state = resetLevel(index);
   hideGameplayOverlay();
@@ -151,6 +219,7 @@ function startLevel(index: number): void {
 }
 
 function onPlay(): void {
+  sfx.setTitleQuiet(false);
   void sfx.resume();
   if (overlayMode === "levels") {
     hideGameplayOverlay();
@@ -188,6 +257,7 @@ function syncHud(): void {
     banner.hidden = true;
     banner.style.opacity = "0";
   }
+  syncChrome();
 }
 
 function stickArgs(event: PointerEvent) {
@@ -225,6 +295,12 @@ levelsBtn.addEventListener("click", () => {
   showLevels();
 });
 
+muteHud.addEventListener("click", onMuteToggle);
+fullscreenHud.addEventListener("click", () => {
+  void onFullscreenToggle();
+});
+onFullscreenChange(syncChrome);
+
 play.addEventListener("click", onPlay);
 
 window.addEventListener("resize", () => {
@@ -245,7 +321,7 @@ function frame(now: number): void {
   state.paused = overlayMode === "levels";
   const prev = state.phase;
   tick(state, dt, sfx);
-  camera = draw(ctx, state, view, safeAreaBottom());
+  camera = draw(ctx, state, view, safeAreaBottom(), !overlay.hidden);
   if (state.phase !== prev && overlayMode === "hidden") {
     if (state.phase === "win") {
       haptic("heavy");
