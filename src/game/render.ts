@@ -323,7 +323,7 @@ function drawStick(
   camera: Camera,
   safeBottom: number,
 ): void {
-  const pad = controlPad(camera, state.world.ball.pos);
+  const pad = controlPad(view, camera, safeBottom);
   const active = state.phase === "aiming";
   const heat = heatAmount(state);
   ctx.globalAlpha = active ? 1 : 0.35;
