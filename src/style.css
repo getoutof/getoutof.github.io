@@ -46,6 +46,7 @@ body {
   right: 0;
   z-index: 2;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -65,7 +66,10 @@ body {
 
 .hud-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
+  margin-left: auto;
   pointer-events: auto;
 }
 
@@ -155,7 +159,8 @@ body {
 }
 
 .overlay[hidden],
-.hud[hidden] {
+.hud[hidden],
+.ghost[hidden] {
   display: none;
 }
 
@@ -195,7 +200,6 @@ h1 {
 .primary {
   width: 100%;
   min-height: 56px;
-  margin-top: auto;
   border-radius: 999px;
   background: var(--ink);
   color: #07080f;
@@ -203,6 +207,19 @@ h1 {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.overlay-footer {
+  width: 100%;
+  margin-top: auto;
+}
+
+.overlay-chrome {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px 20px;
+  margin: 16px 0 10px;
 }
 
 .primary:active,

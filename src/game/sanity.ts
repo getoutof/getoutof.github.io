@@ -4,7 +4,8 @@ import { GROUND_TOP, LEVELS, targetPos, type LevelDef, type TargetDef } from "./
 import { MAX_PULL, MAX_SHOTS, BALL_RADIUS, TARGET_RADIUS, WORLD } from "./math.ts";
 import { createBall, hitsCircle, isSupported, stepWorld } from "./physics.ts";
 import { rememberStars, starsFromShots } from "./progress.ts";
-import { heatColor } from "./render.ts";
+import { createAudio, MUTE_KEY } from "./audio.ts";
+import { draw, heatColor } from "./render.ts";
 
 const silent = { bounce() {}, collect() {}, win() {}, fail() {} };
 const start = LEVELS[0].ball;
@@ -424,5 +425,100 @@ try {
 } finally {
   LEVELS.pop();
 }
+
+const wideCam = layoutCamera(1280, 800);
+if (Math.abs(wideCam.scale - 800 / 640) > 1e-9) throw new Error("wide view must letterbox, not stretch");
+if (wideCam.offsetY !== 0) throw new Error("1280x800 letterbox should be left/right gutters");
+if (Math.abs(wideCam.offsetX - (1280 - WORLD.w * wideCam.scale) / 2) > 1e-9) {
+  throw new Error(`letterbox offsetX should center the 360-wide world, got ${wideCam.offsetX}`);
+}
+if (WORLD.w !== 360 || WORLD.h !== 640) throw new Error("WORLD size must stay 360x640");
+
+type PaintLog = {
+  fills: string[];
+  strokes: string[];
+  rects: number[][];
+};
+
+function stubCtx(): CanvasRenderingContext2D & PaintLog {
+  const log: PaintLog = { fills: [], strokes: [], rects: [] };
+  const grad = () => ({ addColorStop() {} });
+  const ctx = {
+    ...log,
+    fillStyle: "",
+    strokeStyle: "",
+    globalAlpha: 1,
+    lineWidth: 1,
+    lineCap: "butt",
+    shadowColor: "",
+    shadowBlur: 0,
+    fillRect(x: number, y: number, w: number, h: number) {
+      log.rects.push([x, y, w, h]);
+      log.fills.push(String(this.fillStyle));
+    },
+    fill() {
+      log.fills.push(String(this.fillStyle));
+    },
+    stroke() {
+      log.strokes.push(String(this.strokeStyle));
+    },
+    save() {},
+    restore() {},
+    translate() {},
+    scale() {},
+    rotate() {},
+    beginPath() {},
+    closePath() {},
+    arc() {},
+    arcTo() {},
+    moveTo() {},
+    lineTo() {},
+    clip() {},
+    createLinearGradient: grad,
+    createRadialGradient: grad,
+  };
+  return ctx as unknown as CanvasRenderingContext2D & PaintLog;
+}
+
+function paintedGold(log: PaintLog): boolean {
+  return [...log.fills, ...log.strokes].some((style) => style.includes("#F2B62A") || style.includes("242, 182, 42"));
+}
+
+const overlayPaint = stubCtx();
+draw(overlayPaint, resetLevel(3), { w: 1280, h: 800 }, 0, true);
+if (paintedGold(overlayPaint)) throw new Error("overlay must not paint beacon gold over the menu");
+if (!overlayPaint.rects.some((r) => r[2] === 1280 && r[3] === 800)) {
+  throw new Error("desktop gutters should be filled with view-sized space, not only the WORLD rect");
+}
+if (overlayPaint.strokes.includes("#304056") || overlayPaint.fills.includes("#304056")) {
+  throw new Error("overlay must skip platforms");
+}
+
+const playPaint = stubCtx();
+draw(playPaint, resetLevel(3), { w: 360, h: 640 }, 0, false);
+if (!paintedGold(playPaint)) throw new Error("gameplay should still paint beacon gold when overlay is hidden");
+
+const mem = new Map<string, string>();
+Object.defineProperty(globalThis, "localStorage", {
+  configurable: true,
+  value: {
+    getItem: (k: string) => mem.get(k) ?? null,
+    setItem: (k: string, v: string) => {
+      mem.set(k, String(v));
+    },
+    removeItem: (k: string) => {
+      mem.delete(k);
+    },
+  },
+});
+mem.set(MUTE_KEY, "1");
+const quiet = createAudio();
+if (!quiet.isMuted()) throw new Error("mute preference should load from localStorage");
+quiet.setMuted(false);
+if (quiet.isMuted() || mem.get(MUTE_KEY) !== "0") throw new Error("unmute should persist");
+quiet.setMuted(true);
+if (!quiet.isMuted() || mem.get(MUTE_KEY) !== "1") throw new Error("mute should persist");
+quiet.setTitleQuiet(false);
+quiet.setTitleQuiet(true);
 
 console.log("ok", { phase: g.phase, shots: g.shots, collected: g.collected, ball: g.world.ball.pos });

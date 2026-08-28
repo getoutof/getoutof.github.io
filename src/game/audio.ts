@@ -1,3 +1,5 @@
+export const MUTE_KEY = "trajectry.muted";
+
 export type Sfx = {
   resume: () => void;
   launch: () => void;
@@ -5,7 +7,27 @@ export type Sfx = {
   collect: () => void;
   win: () => void;
   fail: () => void;
+  setMuted: (muted: boolean) => void;
+  isMuted: () => boolean;
+  setTitleQuiet: (quiet: boolean) => void;
 };
+
+export function readMuted(): boolean {
+  try {
+    const raw = globalThis.localStorage?.getItem(MUTE_KEY);
+    return raw === "1" || raw === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function writeMuted(muted: boolean): void {
+  try {
+    globalThis.localStorage?.setItem(MUTE_KEY, muted ? "1" : "0");
+  } catch {
+    /* private mode */
+  }
+}
 
 const D2 = 73.42;
 const F2 = 87.31;
@@ -66,11 +88,31 @@ const GUITAR_IN = 16;
 
 export function createAudio(): Sfx {
   let ctx: AudioContext | null = null;
+  let master: GainNode | null = null;
   let scoreOn = false;
+  let muted = readMuted();
+  let titleQuiet = true;
+
+  const silent = () => muted || titleQuiet;
+
+  const applyGain = () => {
+    if (!master || !ctx) return;
+    master.gain.setValueAtTime(silent() ? 0 : 1, ctx.currentTime);
+  };
 
   const get = () => {
     ctx ??= new AudioContext();
+    if (!master) {
+      master = ctx.createGain();
+      master.gain.value = silent() ? 0 : 1;
+      master.connect(ctx.destination);
+    }
     return ctx;
+  };
+
+  const out = () => {
+    get();
+    return master!;
   };
 
   const tone = (freq: number, duration: number, type: OscillatorType, gain = 0.08) => {
@@ -81,7 +123,7 @@ export function createAudio(): Sfx {
     osc.frequency.value = freq;
     g.gain.value = gain;
     g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + duration);
-    osc.connect(g).connect(ac.destination);
+    osc.connect(g).connect(out());
     osc.start();
     osc.stop(ac.currentTime + duration);
   };
@@ -95,7 +137,7 @@ export function createAudio(): Sfx {
     osc.frequency.value = freq;
     g.gain.setValueAtTime(0.0001, now);
     g.gain.linearRampToValueAtTime(gain, now + attack);
-    osc.connect(g).connect(ac.destination);
+    osc.connect(g).connect(out());
     osc.start();
   };
 
@@ -115,7 +157,7 @@ export function createAudio(): Sfx {
       g.gain.setValueAtTime(0.0001, when);
       g.gain.linearRampToValueAtTime(velocity * amp, when + 0.09);
       g.gain.exponentialRampToValueAtTime(0.0001, when + decay);
-      osc.connect(g).connect(ac.destination);
+      osc.connect(g).connect(out());
       osc.start(when);
       osc.stop(when + decay + 0.08);
     }
@@ -137,7 +179,7 @@ export function createAudio(): Sfx {
       g.gain.setValueAtTime(0.0001, when);
       g.gain.linearRampToValueAtTime(velocity * amp, when + 0.06);
       g.gain.exponentialRampToValueAtTime(0.0001, when + decay);
-      osc.connect(g).connect(ac.destination);
+      osc.connect(g).connect(out());
       osc.start(when);
       osc.stop(when + decay + 0.08);
     }
@@ -187,6 +229,18 @@ export function createAudio(): Sfx {
     fail() {
       tone(98, 0.9, "sine", 0.04);
       tone(147, 1.2, "triangle", 0.02);
+    },
+    setMuted(next: boolean) {
+      muted = next;
+      writeMuted(next);
+      applyGain();
+    },
+    isMuted() {
+      return muted;
+    },
+    setTitleQuiet(quiet: boolean) {
+      titleQuiet = quiet;
+      applyGain();
     },
   };
 }
