@@ -23,6 +23,7 @@ import {
   fullscreenAvailable,
   haptic,
   isFullscreen,
+  isNativeShell,
   lockPageChrome,
   onFullscreenChange,
   safeAreaBottom,
@@ -51,7 +52,17 @@ const bannerKicker = required(banner.querySelector<HTMLParagraphElement>(".banne
 const bannerTitle = required(banner.querySelector<HTMLParagraphElement>(".banner-title"), "Нет banner title");
 const ctx = required(canvas.getContext("2d"), "Canvas 2D недоступен");
 
+function registerServiceWorker(): void {
+  if (!import.meta.env.PROD) return;
+  if (isNativeShell()) return;
+  if (!("serviceWorker" in navigator)) return;
+  void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {
+    /* fail closed: online play still works */
+  });
+}
+
 lockPageChrome();
+registerServiceWorker();
 
 const sfx = createAudio();
 let state: GameState = createGame();
